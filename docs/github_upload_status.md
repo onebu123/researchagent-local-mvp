@@ -8,6 +8,7 @@
 - 私有 GitHub 仓库已创建：`https://github.com/onebu123/researchagent-local-mvp`
 - release 提交：`release: ResearchAgent v1.0 local MVP`
 - release tag：`v1.0.0-local-mvp`
+- `main` 分支和 `v1.0.0-local-mvp` tag 已推送到 GitHub。
 
 ## 上传门禁
 
