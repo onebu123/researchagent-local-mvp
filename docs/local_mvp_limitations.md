@@ -43,3 +43,11 @@ Project Export 是本地项目材料包，不是生产备份。
 - `apply_to_literature_index=true` 必须由人工显式触发，且只允许 `decision=approved`。
 - `citation_grounding_report.json` 只表示本地 passage grounding strength，不证明科学事实、统计显著性、因果关系、同行评审通过或生产可用。
 - 正式 References 与正式 BibTeX entry 只来自 `reference_verification_status=approved`、`metadata_status=verified`、`human_verified=true` 的记录。
+
+## v1.3 RAG Quality 的边界
+
+- `local_hybrid` 是本地启发式检索，不是真实向量数据库、embedding 服务或外部检索平台。
+- `chunk_quality_report.json` 只提示 chunk 长度、token、lexical diversity 和 metadata trust 风险，不评价论文质量。
+- `retrieval_eval_report.json` 使用本地 deterministic smoke cases，不是 benchmark-grade eval。
+- hit@k、MRR、quality score 和 score breakdown 不证明科学事实、引用真实性、统计显著性、因果关系、production-ready 或 peer-review-ready。
+- Placeholder metadata 会降低 retrieval trust，但不会因此自动进入 verified reference、正式 BibTeX 或正式 References。

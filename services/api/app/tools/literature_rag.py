@@ -17,6 +17,7 @@ from app.tools.prompt_registry import load_prompt
 PROMPT_VERSION = "literature_answer_v1"
 CHUNK_SIZE = 900
 CHUNK_OVERLAP = 120
+RETRIEVAL_MODES = {"local_hybrid", "local_keyword"}
 
 
 def _utc_now() -> str:
@@ -101,9 +102,81 @@ def _tokens(text: str) -> set[str]:
     }
 
 
-def _score(question_tokens: set[str], chunk: dict[str, Any]) -> int:
+def _token_score(question_tokens: set[str], chunk: dict[str, Any]) -> float:
     chunk_tokens = set(chunk.get("tokens", []))
-    return len(question_tokens & chunk_tokens)
+    if not question_tokens or not chunk_tokens:
+        return 0.0
+    return len(question_tokens & chunk_tokens) / max(len(question_tokens), 1)
+
+
+def _ngrams(text: str, size: int = 4) -> set[str]:
+    compact = re.sub(r"[^a-z0-9]+", "", text.lower())
+    if len(compact) < size:
+        return {compact} if compact else set()
+    return {compact[index : index + size] for index in range(0, len(compact) - size + 1)}
+
+
+def _ngram_score(question: str, chunk: dict[str, Any]) -> float:
+    question_ngrams = _ngrams(question)
+    chunk_ngrams = _ngrams(str(chunk.get("text") or ""))
+    if not question_ngrams or not chunk_ngrams:
+        return 0.0
+    return len(question_ngrams & chunk_ngrams) / len(question_ngrams)
+
+
+def _metadata_trust_score(chunk: dict[str, Any]) -> float:
+    if chunk.get("metadata_status") == "verified" and bool(chunk.get("human_verified")):
+        return 1.0
+    if chunk.get("metadata_status") == "verified":
+        return 0.7
+    if chunk.get("metadata_status") == "placeholder":
+        return 0.2
+    return 0.4
+
+
+def _lexical_diversity(chunk: dict[str, Any]) -> float:
+    words = re.findall(r"[A-Za-z0-9][A-Za-z0-9_-]{2,}", str(chunk.get("text") or "").lower())
+    if not words:
+        return 0.0
+    return len(set(words)) / len(words)
+
+
+def _quality_score(chunk: dict[str, Any]) -> tuple[float, list[str]]:
+    text = str(chunk.get("text") or "").strip()
+    warnings: list[str] = []
+    if len(text) < 120:
+        warnings.append("chunk text is short")
+    if _lexical_diversity(chunk) < 0.35:
+        warnings.append("chunk lexical diversity is low")
+    if chunk.get("metadata_status") == "placeholder":
+        warnings.append("placeholder metadata reduces retrieval trust")
+    score = 1.0
+    score -= 0.2 if len(text) < 120 else 0.0
+    score -= 0.2 if _lexical_diversity(chunk) < 0.35 else 0.0
+    score -= 0.25 if chunk.get("metadata_status") == "placeholder" else 0.0
+    return max(round(score, 4), 0.0), warnings
+
+
+def score_chunk(question: str, chunk: dict[str, Any], retrieval_mode: str = "local_hybrid") -> dict[str, Any]:
+    question_tokens = _tokens(question)
+    keyword = _token_score(question_tokens, chunk)
+    ngram = _ngram_score(question, chunk)
+    metadata_trust = _metadata_trust_score(chunk)
+    quality, warnings = _quality_score(chunk)
+    if retrieval_mode == "local_keyword":
+        overall = keyword
+    else:
+        overall = (keyword * 0.55) + (ngram * 0.25) + (metadata_trust * 0.1) + (quality * 0.1)
+    matched_terms = sorted(question_tokens & set(chunk.get("tokens", [])))
+    return {
+        "score": round(overall, 4),
+        "keyword_score": round(keyword, 4),
+        "ngram_score": round(ngram, 4),
+        "metadata_trust_score": round(metadata_trust, 4),
+        "quality_score": round(quality, 4),
+        "matched_terms": matched_terms,
+        "quality_warnings": warnings,
+    }
 
 
 def build_literature_rag(project_dir: Path, project_id: str) -> dict[str, Any]:
@@ -139,13 +212,15 @@ def build_literature_rag(project_dir: Path, project_id: str) -> dict[str, Any]:
         "created_at": _utc_now(),
         "relative_path": "literature/rag/rag_index.json",
         "chunks_file": "literature/rag/chunks.jsonl",
-        "retrieval_mode": "local_keyword",
+        "retrieval_mode": "local_hybrid",
+        "supported_retrieval_modes": sorted(RETRIEVAL_MODES),
         "optional_paperqa2_enabled": False,
         "prompt_version": prompt["prompt_version"],
         "chunk_count": len(chunks),
         "literature_count": len({chunk["literature_id"] for chunk in chunks}),
         "notes": [
-            "Local keyword retrieval only; no external PaperQA2 dependency is required.",
+            "Local hybrid retrieval uses keyword overlap, character n-gram similarity, metadata trust, and chunk quality signals.",
+            "No external vector database, embedding service, or PaperQA2 dependency is required.",
             "Passages are copied from local parsed literature text only.",
         ],
     }
@@ -159,7 +234,7 @@ def build_literature_rag(project_dir: Path, project_id: str) -> dict[str, Any]:
             "chunk_count": len(chunks),
             "chunks_file": "literature/rag/chunks.jsonl",
             "index_file": "literature/rag/rag_index.json",
-            "retrieval_mode": "local_keyword",
+            "retrieval_mode": "local_hybrid",
         },
         source="api",
         event_category="literature",
@@ -186,15 +261,22 @@ def _ensure_chunks(project_dir: Path, project_id: str) -> list[dict[str, Any]]:
     return read_rag_chunks(project_dir)
 
 
-def retrieve_chunks(project_dir: Path, project_id: str, question: str, top_k: int = 5) -> list[dict[str, Any]]:
+def retrieve_chunks(
+    project_dir: Path,
+    project_id: str,
+    question: str,
+    top_k: int = 5,
+    retrieval_mode: str = "local_hybrid",
+) -> list[dict[str, Any]]:
+    if retrieval_mode not in RETRIEVAL_MODES:
+        raise ValueError(f"unsupported retrieval_mode: {retrieval_mode}")
     chunks = _ensure_chunks(project_dir, project_id)
-    question_tokens = _tokens(question)
-    scored = [
-        {**chunk, "score": _score(question_tokens, chunk)}
-        for chunk in chunks
-        if _score(question_tokens, chunk) > 0
-    ]
-    scored.sort(key=lambda item: (-int(item["score"]), str(item["chunk_id"])))
+    scored: list[dict[str, Any]] = []
+    for chunk in chunks:
+        score = score_chunk(question, chunk, retrieval_mode=retrieval_mode)
+        if score["score"] > 0 or score["keyword_score"] > 0 or score["ngram_score"] > 0:
+            scored.append({**chunk, **score, "retrieval_mode": retrieval_mode})
+    scored.sort(key=lambda item: (-float(item["score"]), str(item["chunk_id"])))
     return scored[: max(min(top_k, 10), 1)]
 
 
@@ -210,6 +292,14 @@ def _source_passages(retrieved: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "metadata_status": chunk.get("metadata_status"),
                 "human_verified": bool(chunk.get("human_verified")),
                 "score": chunk.get("score", 0),
+                "score_breakdown": {
+                    "keyword_score": chunk.get("keyword_score", 0),
+                    "ngram_score": chunk.get("ngram_score", 0),
+                    "metadata_trust_score": chunk.get("metadata_trust_score", 0),
+                    "quality_score": chunk.get("quality_score", 0),
+                },
+                "matched_terms": chunk.get("matched_terms", []),
+                "quality_warnings": chunk.get("quality_warnings", []),
                 "text": chunk.get("text", ""),
             }
         )
@@ -221,11 +311,18 @@ def ask_literature_rag(
     project_id: str,
     question: str,
     top_k: int = 5,
+    retrieval_mode: str = "local_hybrid",
 ) -> dict[str, Any]:
     cleaned_question = question.strip()
     if not cleaned_question:
         raise ValueError("question must not be empty")
-    retrieved = retrieve_chunks(project_dir, project_id, cleaned_question, top_k=top_k)
+    retrieved = retrieve_chunks(
+        project_dir,
+        project_id,
+        cleaned_question,
+        top_k=top_k,
+        retrieval_mode=retrieval_mode,
+    )
     source_passages = _source_passages(retrieved)
     unsupported_notes: list[str] = []
     if not source_passages:
@@ -284,8 +381,16 @@ def ask_literature_rag(
         "limitations": parsed.get("limitations", fallback["limitations"]),
         "retrieval": {
             "mode": "local_keyword",
+            "retrieval_mode": retrieval_mode,
             "top_k": top_k,
             "returned": len(source_passages),
+            "quality_warnings": sorted(
+                {
+                    warning
+                    for passage in source_passages
+                    for warning in passage.get("quality_warnings", [])
+                }
+            ),
         },
         "llm": {
             "mode": response.mode,
@@ -317,6 +422,7 @@ def ask_literature_rag(
             "source_chunk_ids": [passage["chunk_id"] for passage in source_passages],
             "unsupported": not bool(source_passages),
             "llm_mode": response.mode,
+            "retrieval_mode": retrieval_mode,
         },
         source="api",
         event_category="literature",

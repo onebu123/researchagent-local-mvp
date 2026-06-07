@@ -569,6 +569,7 @@ class LLMTestRequest(BaseModel):
 class LiteratureRAGAskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     top_k: int = Field(default=5, ge=1, le=10)
+    retrieval_mode: Literal["local_hybrid", "local_keyword"] = "local_hybrid"
 
     @field_validator("question")
     @classmethod

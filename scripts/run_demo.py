@@ -18,6 +18,7 @@ from app.tools.literature_rag import ask_literature_rag, build_literature_rag
 from app.tools.manuscript_references import generate_manuscript_references
 from app.tools.reference_approval import record_reference_approval
 from app.tools.reference_verification import run_reference_verification
+from app.tools.rag_quality import generate_chunk_quality_report, generate_retrieval_eval_report, generate_retrieval_eval_set
 from app.tools.source_passage_evidence import generate_source_passage_evidence
 from scripts.seed_demo import main as seed_demo
 
@@ -42,6 +43,9 @@ REQUIRED_FILES = [
     "literature/rag/chunks.jsonl",
     "literature/rag/rag_index.json",
     "literature/rag/rag_answers.jsonl",
+    "literature/rag/chunk_quality_report.json",
+    "literature/rag/retrieval_eval_set.json",
+    "literature/rag/retrieval_eval_report.json",
     "provenance/source_passage_evidence.json",
     "literature/metadata_lookup_results.jsonl",
     "literature/metadata_lookup_summary.json",
@@ -64,7 +68,15 @@ def main() -> None:
     response = workflow_service.run_workflow("demo_project")
     project_dir = storage_service.project_dir("demo_project")
     build_literature_rag(project_dir, "demo_project")
-    ask_literature_rag(project_dir, "demo_project", "What does the demo literature mention about efficiency?")
+    ask_literature_rag(
+        project_dir,
+        "demo_project",
+        "What does the demo literature mention about efficiency?",
+        retrieval_mode="local_hybrid",
+    )
+    generate_chunk_quality_report(project_dir, "demo_project")
+    generate_retrieval_eval_set(project_dir, "demo_project")
+    generate_retrieval_eval_report(project_dir, "demo_project")
     generate_source_passage_evidence(project_dir, "demo_project")
     run_metadata_lookup(project_dir, "demo_project", provider="mock_fixture")
     verification = run_reference_verification(project_dir, "demo_project", provider="mock_fixture")

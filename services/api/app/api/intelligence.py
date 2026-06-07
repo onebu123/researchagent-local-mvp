@@ -35,6 +35,12 @@ from app.tools.reference_verification import (
     read_reference_verification_summary,
     run_reference_verification,
 )
+from app.tools.rag_quality import (
+    generate_retrieval_eval_report,
+    read_chunk_quality_report,
+    read_retrieval_eval_report,
+    read_retrieval_eval_set,
+)
 from app.tools.source_passage_evidence import read_source_passage_evidence
 
 router = APIRouter()
@@ -85,6 +91,7 @@ def ask_project_literature_rag(
             project_id,
             payload.question,
             top_k=payload.top_k,
+            retrieval_mode=payload.retrieval_mode,
         )
     except Exception as exc:
         raise _handle_tool_error(exc) from exc
@@ -98,6 +105,38 @@ def get_project_literature_rag_chunks(project_id: str) -> list[dict[str, Any]]:
 @router.get("/projects/{project_id}/literature/rag/answers")
 def get_project_literature_rag_answers(project_id: str) -> list[dict[str, Any]]:
     return read_rag_answers(_project_dir(project_id))
+
+
+@router.get("/projects/{project_id}/literature/rag/quality")
+def get_project_literature_rag_quality(project_id: str) -> dict[str, Any]:
+    try:
+        return read_chunk_quality_report(_project_dir(project_id), project_id)
+    except Exception as exc:
+        raise _handle_tool_error(exc) from exc
+
+
+@router.get("/projects/{project_id}/literature/rag/eval-set")
+def get_project_literature_rag_eval_set(project_id: str) -> dict[str, Any]:
+    try:
+        return read_retrieval_eval_set(_project_dir(project_id), project_id)
+    except Exception as exc:
+        raise _handle_tool_error(exc) from exc
+
+
+@router.post("/projects/{project_id}/literature/rag/evaluate")
+def evaluate_project_literature_rag(project_id: str) -> dict[str, Any]:
+    try:
+        return generate_retrieval_eval_report(_project_dir(project_id), project_id)
+    except Exception as exc:
+        raise _handle_tool_error(exc) from exc
+
+
+@router.get("/projects/{project_id}/literature/rag/evaluation")
+def get_project_literature_rag_evaluation(project_id: str) -> dict[str, Any]:
+    try:
+        return read_retrieval_eval_report(_project_dir(project_id), project_id)
+    except Exception as exc:
+        raise _handle_tool_error(exc) from exc
 
 
 @router.get("/projects/{project_id}/provenance/source-passage-evidence")

@@ -205,3 +205,29 @@ python scripts/validate_v12.py
 
 - [v1.2 验收标准](docs/v1.2_acceptance_criteria.md)
 - [v1.2 验收报告](docs/v1.2_acceptance_report.md)
+
+## ResearchAgent v1.3 RAG Quality
+
+v1.3 在 v1.2 基础上把 Literature RAG 从本地关键词检索升级为本地 `local_hybrid` 检索。它使用 keyword overlap、character n-gram similarity、metadata trust 和 chunk quality 组成 heuristic score，不接真实向量数据库、不调用外部 embedding 服务、不依赖外部网络。
+
+新增输出：
+- `literature/rag/chunk_quality_report.json`
+- `literature/rag/retrieval_eval_set.json`
+- `literature/rag/retrieval_eval_report.json`
+
+新增 API：
+- `GET /api/projects/{project_id}/literature/rag/quality`
+- `GET /api/projects/{project_id}/literature/rag/eval-set`
+- `POST /api/projects/{project_id}/literature/rag/evaluate`
+- `GET /api/projects/{project_id}/literature/rag/evaluation`
+
+v1.3 常用命令：
+```bash
+python scripts/run_demo.py
+python scripts/validate_v13.py
+```
+
+RAG Quality 分数和 retrieval eval 指标只是本地检索质量启发式检查，不代表科学事实证明、真实 benchmark、production-ready 或 peer-review-ready。
+
+- [v1.3 验收标准](docs/v1.3_acceptance_criteria.md)
+- [v1.3 验收报告](docs/v1.3_acceptance_report.md)

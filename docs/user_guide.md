@@ -82,3 +82,19 @@ v1.2 验证命令：
 python scripts/run_demo.py
 python scripts/validate_v12.py
 ```
+
+## v1.3 RAG Quality
+
+v1.3 在 `Literature Intelligence` 分组新增 `RAG Quality`：
+- `Literature RAG` 默认使用 `local_hybrid`，同时保留 `local_keyword` fallback。
+- `RAG Quality` 展示 `chunk_quality_report.json`、`retrieval_eval_set.json` 和 `retrieval_eval_report.json`。
+- `Run Retrieval Eval` 使用本地 deterministic eval cases，不调用外部网络、embedding 服务或向量数据库。
+- source passage 会显示 score breakdown：keyword、n-gram、metadata trust、chunk quality。
+
+v1.3 输出仅用于本地检索质量排查。高 hit@k 或高 quality score 不代表科学事实成立、引用已验证、生产级检索质量或 peer-review-ready。
+
+v1.3 验证命令：
+```bash
+python scripts/run_demo.py
+python scripts/validate_v13.py
+```

@@ -37,6 +37,9 @@ import type {
   LiteratureRAGAnswer,
   LiteratureRAGChunk,
   LiteratureRAGIndex,
+  RAGChunkQualityReport,
+  RAGRetrievalEvalReport,
+  RAGRetrievalEvalSet,
   LiteratureRecord,
   ManuscriptDiff,
   ManuscriptDiffPreview,
@@ -140,11 +143,12 @@ export async function buildLiteratureRAG(projectId: string): Promise<LiteratureR
 export async function askLiteratureRAG(
   projectId: string,
   question: string,
-  topK = 5
+  topK = 5,
+  retrievalMode = "local_hybrid"
 ): Promise<LiteratureRAGAnswer> {
   return request<LiteratureRAGAnswer>(`/api/projects/${projectId}/literature/rag/ask`, {
     method: "POST",
-    body: JSON.stringify({ question, top_k: topK })
+    body: JSON.stringify({ question, top_k: topK, retrieval_mode: retrievalMode })
   });
 }
 
@@ -154,6 +158,24 @@ export async function getLiteratureRAGChunks(projectId: string): Promise<Literat
 
 export async function getLiteratureRAGAnswers(projectId: string): Promise<LiteratureRAGAnswer[]> {
   return request<LiteratureRAGAnswer[]>(`/api/projects/${projectId}/literature/rag/answers`);
+}
+
+export async function getRAGChunkQuality(projectId: string): Promise<RAGChunkQualityReport> {
+  return request<RAGChunkQualityReport>(`/api/projects/${projectId}/literature/rag/quality`);
+}
+
+export async function getRAGRetrievalEvalSet(projectId: string): Promise<RAGRetrievalEvalSet> {
+  return request<RAGRetrievalEvalSet>(`/api/projects/${projectId}/literature/rag/eval-set`);
+}
+
+export async function evaluateRAGRetrieval(projectId: string): Promise<RAGRetrievalEvalReport> {
+  return request<RAGRetrievalEvalReport>(`/api/projects/${projectId}/literature/rag/evaluate`, {
+    method: "POST"
+  });
+}
+
+export async function getRAGRetrievalEvaluation(projectId: string): Promise<RAGRetrievalEvalReport> {
+  return request<RAGRetrievalEvalReport>(`/api/projects/${projectId}/literature/rag/evaluation`);
 }
 
 export async function getSourcePassageEvidence(projectId: string): Promise<SourcePassageEvidenceReport> {
@@ -2077,6 +2099,15 @@ export const mockLiteratureRAGChunks: LiteratureRAGChunk[] = [
     source_type: "markdown",
     metadata_status: "placeholder",
     human_verified: false,
+    score: 0.61,
+    score_breakdown: {
+      keyword_score: 0.72,
+      ngram_score: 0.44,
+      metadata_trust_score: 0.2,
+      quality_score: 0.75
+    },
+    matched_terms: ["efficiency", "stability"],
+    quality_warnings: ["placeholder metadata reduces retrieval trust"],
     start_char: 0,
     end_char: 420,
     text:
@@ -2098,7 +2129,13 @@ export const mockLiteratureRAGAnswers: LiteratureRAGAnswer[] = [
     source_passages: mockLiteratureRAGChunks,
     unsupported_notes: [],
     limitations: ["Mock fallback; human review is required before citation."],
-    retrieval: { mode: "local_keyword", top_k: 5, returned: 1 },
+    retrieval: {
+      mode: "local_hybrid",
+      retrieval_mode: "local_hybrid",
+      top_k: 5,
+      returned: 1,
+      quality_warnings: ["placeholder metadata reduces retrieval trust"]
+    },
     llm: {
       mode: "mock",
       provider: "openai-compatible",
@@ -2114,12 +2151,95 @@ export const mockLiteratureRAGIndex: LiteratureRAGIndex = {
   created_at: new Date().toISOString(),
   relative_path: "literature/rag/rag_index.json",
   chunks_file: "literature/rag/chunks.jsonl",
-  retrieval_mode: "local_keyword",
+  retrieval_mode: "local_hybrid",
+  supported_retrieval_modes: ["local_hybrid", "local_keyword"],
   optional_paperqa2_enabled: false,
   prompt_version: "literature_answer_v1",
   chunk_count: mockLiteratureRAGChunks.length,
   literature_count: 1,
-  notes: ["Mock local keyword RAG index."]
+  notes: ["Mock local hybrid RAG index with keyword, n-gram, metadata trust, and chunk quality signals."]
+};
+
+export const mockRAGChunkQuality: RAGChunkQualityReport = {
+  generated_at: new Date().toISOString(),
+  relative_path: "literature/rag/chunk_quality_report.json",
+  chunks_file: "literature/rag/chunks.jsonl",
+  summary: {
+    total_chunks: 1,
+    ok: 0,
+    needs_review: 1,
+    poor: 0,
+    placeholder_metadata: 1,
+    average_quality_score: 0.75
+  },
+  items: [
+    {
+      chunk_id: "chunk_lit_001_0001",
+      literature_id: "lit_001",
+      source_file: "literature/demo_literature.md",
+      title: "Demo literature placeholder",
+      metadata_status: "placeholder",
+      human_verified: false,
+      character_count: 106,
+      token_count: 8,
+      lexical_diversity: 0.9,
+      quality_score: 0.75,
+      quality_status: "needs_review",
+      warnings: ["placeholder metadata reduces retrieval trust"]
+    }
+  ],
+  limitations: ["Chunk quality is a local heuristic for retrieval review."]
+};
+
+export const mockRAGRetrievalEvalSet: RAGRetrievalEvalSet = {
+  generated_at: new Date().toISOString(),
+  relative_path: "literature/rag/retrieval_eval_set.json",
+  retrieval_mode: "local_hybrid",
+  cases: [
+    {
+      case_id: "rag_eval_0001",
+      query: "process temperature efficiency stability",
+      expected_literature_id: "lit_001",
+      expected_chunk_id: "chunk_lit_001_0001",
+      source: "local_chunk_tokens",
+      notes: ["Local deterministic smoke case."]
+    }
+  ],
+  limitations: ["Eval cases are local smoke checks only."]
+};
+
+export const mockRAGRetrievalEvaluation: RAGRetrievalEvalReport = {
+  generated_at: new Date().toISOString(),
+  relative_path: "literature/rag/retrieval_eval_report.json",
+  eval_set_file: "literature/rag/retrieval_eval_set.json",
+  retrieval_mode: "local_hybrid",
+  metrics: {
+    total_cases: 1,
+    hit_at_1: 1,
+    hit_at_3: 1,
+    mean_reciprocal_rank: 1
+  },
+  results: [
+    {
+      case_id: "rag_eval_0001",
+      query: "process temperature efficiency stability",
+      expected_chunk_id: "chunk_lit_001_0001",
+      expected_literature_id: "lit_001",
+      top_chunk_ids: ["chunk_lit_001_0001"],
+      top_literature_ids: ["lit_001"],
+      hit_at_1: true,
+      hit_at_3: true,
+      rank: 1,
+      top_score: 0.61,
+      top_score_breakdown: {
+        keyword_score: 0.72,
+        ngram_score: 0.44,
+        metadata_trust_score: 0.2,
+        quality_score: 0.75
+      }
+    }
+  ],
+  limitations: ["Metrics do not prove scientific correctness or production retrieval quality."]
 };
 
 export const mockSourcePassageEvidence: SourcePassageEvidenceReport = {

@@ -1293,6 +1293,14 @@ export type RAGSourcePassage = {
   metadata_status: string | null;
   human_verified: boolean;
   score?: number;
+  score_breakdown?: {
+    keyword_score: number;
+    ngram_score: number;
+    metadata_trust_score: number;
+    quality_score: number;
+  };
+  matched_terms?: string[];
+  quality_warnings?: string[];
   text: string;
 };
 
@@ -1302,11 +1310,82 @@ export type LiteratureRAGIndex = {
   relative_path: string;
   chunks_file: string;
   retrieval_mode: string;
+  supported_retrieval_modes?: string[];
   optional_paperqa2_enabled: boolean;
   prompt_version: string;
   chunk_count: number;
   literature_count: number;
   notes: string[];
+};
+
+export type RAGChunkQualityItem = {
+  chunk_id: string;
+  literature_id: string;
+  source_file: string | null;
+  title: string | null;
+  metadata_status: string | null;
+  human_verified: boolean;
+  character_count: number;
+  token_count: number;
+  lexical_diversity: number;
+  quality_score: number;
+  quality_status: "ok" | "needs_review" | "poor" | string;
+  warnings: string[];
+};
+
+export type RAGChunkQualityReport = {
+  generated_at: string;
+  relative_path: string;
+  chunks_file: string;
+  summary: Record<string, number>;
+  items: RAGChunkQualityItem[];
+  limitations: string[];
+};
+
+export type RAGRetrievalEvalCase = {
+  case_id: string;
+  query: string;
+  expected_literature_id: string;
+  expected_chunk_id: string;
+  source: string;
+  notes: string[];
+};
+
+export type RAGRetrievalEvalSet = {
+  generated_at: string;
+  relative_path: string;
+  retrieval_mode: string;
+  cases: RAGRetrievalEvalCase[];
+  limitations: string[];
+};
+
+export type RAGRetrievalEvalResult = {
+  case_id: string;
+  query: string;
+  expected_chunk_id: string;
+  expected_literature_id: string;
+  top_chunk_ids: string[];
+  top_literature_ids: string[];
+  hit_at_1: boolean;
+  hit_at_3: boolean;
+  rank: number | null;
+  top_score: number;
+  top_score_breakdown: {
+    keyword_score: number;
+    ngram_score: number;
+    metadata_trust_score: number;
+    quality_score: number;
+  };
+};
+
+export type RAGRetrievalEvalReport = {
+  generated_at: string;
+  relative_path: string;
+  eval_set_file: string;
+  retrieval_mode: string;
+  metrics: Record<string, number>;
+  results: RAGRetrievalEvalResult[];
+  limitations: string[];
 };
 
 export type LiteratureRAGChunk = RAGSourcePassage & {

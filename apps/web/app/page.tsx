@@ -65,6 +65,7 @@ import { PatchItemEditorPanel } from "@/components/PatchItemEditorPanel";
 import { PatchMergePanel } from "@/components/PatchMergePanel";
 import { ProgressPanel } from "@/components/ProgressPanel";
 import { ProjectExportPanel } from "@/components/ProjectExportPanel";
+import { RAGQualityPanel } from "@/components/RAGQualityPanel";
 import { RecentOutputs } from "@/components/RecentOutputs";
 import { ResourcePanel } from "@/components/ResourcePanel";
 import { RevisionDiffPanel } from "@/components/RevisionDiffPanel";
@@ -129,6 +130,10 @@ import {
   getPromptRegistry,
   getLiteratureRAGAnswers,
   getLiteratureRAGChunks,
+  getRAGChunkQuality,
+  getRAGRetrievalEvalSet,
+  getRAGRetrievalEvaluation,
+  evaluateRAGRetrieval,
   getSourcePassageEvidence,
   getMetadataLookupResults,
   getBibTeX,
@@ -199,6 +204,9 @@ import {
   mockLiteratureRAGAnswers,
   mockLiteratureRAGChunks,
   mockLiteratureRAGIndex,
+  mockRAGChunkQuality,
+  mockRAGRetrievalEvalSet,
+  mockRAGRetrievalEvaluation,
   mockLiteratureHistory,
   mockMetadataLookupResults,
   mockManuscriptReferencesPreview,
@@ -284,6 +292,9 @@ import type {
   LiteratureRAGAnswer,
   LiteratureRAGChunk,
   LiteratureRAGIndex,
+  RAGChunkQualityReport,
+  RAGRetrievalEvalReport,
+  RAGRetrievalEvalSet,
   LiteratureRecord,
   MetadataRevertPreview,
   MetadataReviewActionValue,
@@ -358,6 +369,7 @@ type DetailMode =
   | "llmSettings"
   | "llmCallLog"
   | "literatureRag"
+  | "ragQuality"
   | "sourcePassageEvidence"
   | "literatureMetadataLookup"
   | "referenceVerification"
@@ -428,6 +440,12 @@ export default function DashboardPage() {
     useState<LiteratureRAGChunk[]>(mockLiteratureRAGChunks);
   const [literatureRagAnswers, setLiteratureRagAnswers] =
     useState<LiteratureRAGAnswer[]>(mockLiteratureRAGAnswers);
+  const [ragChunkQuality, setRAGChunkQuality] =
+    useState<RAGChunkQualityReport>(mockRAGChunkQuality);
+  const [ragRetrievalEvalSet, setRAGRetrievalEvalSet] =
+    useState<RAGRetrievalEvalSet>(mockRAGRetrievalEvalSet);
+  const [ragRetrievalEvaluation, setRAGRetrievalEvaluation] =
+    useState<RAGRetrievalEvalReport>(mockRAGRetrievalEvaluation);
   const [sourcePassageEvidence, setSourcePassageEvidence] =
     useState<SourcePassageEvidenceReport>(mockSourcePassageEvidence);
   const [metadataLookupProvider, setMetadataLookupProvider] = useState("mock_fixture");
@@ -887,15 +905,60 @@ export default function DashboardPage() {
   async function handleAskLiteratureRAG(question: string) {
     setPatchActionLoading(true);
     try {
-      const answer = apiOnline ? await askLiteratureRAG(project.id, question) : mockLiteratureRAGAnswers[0];
+      const answer = apiOnline
+        ? await askLiteratureRAG(project.id, question, 5, "local_hybrid")
+        : mockLiteratureRAGAnswers[0];
       setLiteratureRagAnswers((current) => [
         answer,
         ...current.filter((item) => item.answer_id !== answer.answer_id)
       ]);
-      setMessage("Literature RAG answer generated with source passage links.");
+      setMessage("Literature RAG answer generated with local hybrid retrieval signals.");
     } catch {
       setLiteratureRagAnswers(mockLiteratureRAGAnswers);
       setMessage("Literature RAG ask failed; using mock data.");
+    } finally {
+      setPatchActionLoading(false);
+    }
+  }
+
+  function handleOpenRAGQuality() {
+    setDetailMode("ragQuality");
+    setDetailLoading(true);
+    const loadQuality = apiOnline
+      ? getRAGChunkQuality(project.id)
+      : Promise.resolve(mockRAGChunkQuality);
+    const loadEvalSet = apiOnline
+      ? getRAGRetrievalEvalSet(project.id)
+      : Promise.resolve(mockRAGRetrievalEvalSet);
+    const loadEvaluation = apiOnline
+      ? getRAGRetrievalEvaluation(project.id)
+      : Promise.resolve(mockRAGRetrievalEvaluation);
+    void Promise.all([loadQuality, loadEvalSet, loadEvaluation])
+      .then(([quality, evalSet, evaluation]) => {
+        setRAGChunkQuality(quality);
+        setRAGRetrievalEvalSet(evalSet);
+        setRAGRetrievalEvaluation(evaluation);
+      })
+      .catch(() => {
+        setRAGChunkQuality(mockRAGChunkQuality);
+        setRAGRetrievalEvalSet(mockRAGRetrievalEvalSet);
+        setRAGRetrievalEvaluation(mockRAGRetrievalEvaluation);
+        setMessage("RAG Quality read failed; using mock data.");
+      })
+      .finally(() => setDetailLoading(false));
+  }
+
+  async function handleEvaluateRAGRetrieval() {
+    setPatchActionLoading(true);
+    try {
+      const evaluation = apiOnline
+        ? await evaluateRAGRetrieval(project.id)
+        : mockRAGRetrievalEvaluation;
+      setRAGRetrievalEvaluation(evaluation);
+      setMessage("RAG retrieval eval completed with local deterministic cases.");
+    } catch {
+      setRAGRetrievalEvaluation(mockRAGRetrievalEvaluation);
+      setMessage("RAG retrieval eval failed; using mock data.");
     } finally {
       setPatchActionLoading(false);
     }
@@ -2529,6 +2592,14 @@ export default function DashboardPage() {
                   </button>
                   <button
                     className="secondary-button justify-start"
+                    onClick={handleOpenRAGQuality}
+                    aria-label="RAG Quality"
+                  >
+                    <BarChart3 size={16} />
+                    <span>RAG Quality</span>
+                  </button>
+                  <button
+                    className="secondary-button justify-start"
                     onClick={handleOpenSourcePassageEvidence}
                     aria-label="Source Passage Evidence"
                   >
@@ -3032,6 +3103,16 @@ export default function DashboardPage() {
         actionLoading={patchActionLoading}
         onBuild={handleBuildLiteratureRAG}
         onAsk={handleAskLiteratureRAG}
+        onClose={closeDetails}
+      />
+      <RAGQualityPanel
+        open={detailMode === "ragQuality"}
+        quality={ragChunkQuality}
+        evalSet={ragRetrievalEvalSet}
+        evaluation={ragRetrievalEvaluation}
+        loading={detailLoading}
+        actionLoading={patchActionLoading}
+        onEvaluate={handleEvaluateRAGRetrieval}
         onClose={closeDetails}
       />
       <SourcePassageEvidencePanel

@@ -216,3 +216,12 @@ npx playwright test
 - Citation Grounding 只能基于本地 RAG/source passages 输出 `provenance/citation_grounding_report.json`；`strong` 也不是科学事实证明、统计显著性证明、因果证明或 peer-review-ready 声明。
 - optional reference providers 在无网络或未配置时必须 graceful failure，不得成为 demo、test 或 validation 的硬依赖。
 - 前端必须保留 mock fallback；`ReferenceVerificationPanel`、`ReferenceApprovalPanel`、`CitationGroundingPanel`、`VerifiedReferencesPanel` 不得把 candidate 显示成 verified。
+
+## ResearchAgent v1.3 开发边界
+- `python scripts/validate_v13.py` 必须保持可运行，并通过 v1.2 validation 保护既有能力。
+- Literature RAG 默认使用 `local_hybrid`，只能组合本地 keyword overlap、character n-gram similarity、metadata trust 和 chunk quality heuristic；不得强依赖外部 embedding、向量数据库、PaperQA2 或公网服务。
+- `chunk_quality_report.json`、`retrieval_eval_set.json`、`retrieval_eval_report.json` 只能表示本地检索质量检查，不得宣称真实 benchmark、科学事实证明、生产检索质量或 peer-review-ready。
+- `local_keyword` 必须保留为 fallback；无 API key、无外网时 demo、pytest、Playwright 和 validation 仍需通过。
+- Placeholder metadata 必须降低 trust 或触发 warning；不得因为 hybrid score 高就把文献升级为 verified、approved、正式引用或强 citation grounding。
+- RAG answer 必须记录 `retrieval_mode`、source passage、score breakdown 和 limitations；不得泄露 API key、完整敏感 prompt 或本机绝对路径。
+- 前端 `RAGQualityPanel` 必须保留 mock fallback，并明确展示质量/评测为本地 heuristic。
