@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import os
 import re
 import shutil
 import subprocess
@@ -91,6 +92,8 @@ def run_quietly(func) -> object:
 
 def run_command(label: str, command: list[str], cwd: Path) -> None:
     print(f"[validate_v1] {label}...", flush=True)
+    env = os.environ.copy()
+    env.setdefault("NODE_OPTIONS", "--max-old-space-size=8192 --max-semi-space-size=512")
     result = subprocess.run(
         command,
         cwd=cwd,
@@ -99,6 +102,7 @@ def run_command(label: str, command: list[str], cwd: Path) -> None:
         text=True,
         encoding="utf-8",
         errors="replace",
+        env=env,
     )
     if result.returncode != 0:
         raise AssertionError(f"{label} failed with exit code {result.returncode}\n{result.stdout}")

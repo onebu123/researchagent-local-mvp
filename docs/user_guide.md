@@ -113,3 +113,25 @@ v1.4 验证命令：
 python scripts/run_demo.py
 python scripts/validate_v14.py
 ```
+
+## ResearchAgent v1.5 Workspace Export
+
+v1.5 在右侧工具区新增 `Workspace Export`。建议流程：
+
+1. 运行 `python scripts/run_demo.py` 生成本地 demo 产物。
+2. 打开前端首页，点击 `Workspace Export`。
+3. 点击 `Generate docs` 生成本地导出文件。
+4. 点击 `Refresh` 查看最新 `workspace_export_manifest.json`。
+5. 运行 `python scripts/validate_v15.py` 做本地验收。
+
+生成文件：
+
+- `exports/workspace/research_workspace_export.docx`
+- `exports/workspace/research_workspace_export.tex`
+- `exports/workspace/trust_report.md`
+- `exports/workspace/trust_report.json`
+- `exports/workspace/workspace_export_manifest.json`
+
+`research_workspace_export.docx` 用于人工审阅本地 workspace 摘要；`research_workspace_export.tex` 只是 LaTeX source，不执行完整编译；`trust_report.json` 和 `trust_report.md` 汇总 local MVP 证据、来源文件、audit hash chain 状态和 caveats。后端不可用时，前端仍显示 mock fallback，但真实文件生成必须调用后端 API。
+
+Workspace Export 不会把 candidate 或 placeholder references 升级为正式引用，不会生成 DOI、p-values、significance、causal claims 或 OCR output，也不作为 production、compliance 或 peer review 证据。

@@ -9,6 +9,7 @@ from typing import Any, Iterable
 
 from app.tools.audit_log import append_audit_event
 from app.tools.file_tools import ensure_dir, write_json
+from app.tools.pdf_quality_report import generate_pdf_quality_report, pdf_quality_report_path
 
 
 EXPORT_ROOTS = [
@@ -206,6 +207,9 @@ def build_project_export(project_dir: Path, project_id: str) -> dict[str, Any]:
     project_dir = project_dir.resolve()
     if not project_dir.exists() or not project_dir.is_dir():
         raise FileNotFoundError(f"Project directory does not exist: {project_id}")
+
+    if not pdf_quality_report_path(project_dir).exists():
+        generate_pdf_quality_report(project_dir, project_id)
 
     created_at = _utc_now()
     timestamp = _timestamp_for_filename()

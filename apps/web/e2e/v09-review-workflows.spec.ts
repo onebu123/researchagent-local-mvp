@@ -40,13 +40,13 @@ test("v0.9 review workflow panels render with mock fallback", async ({ page }) =
   await expect(page.getByText("Filtered Audit Report").first()).toBeVisible();
   await closeDrawer(page);
 
-  await page.reload();
-
+  await expect(page.getByTestId("audit-log-entry")).toBeVisible();
   await page.getByTestId("audit-log-entry").click();
   await expect(page.getByText("event_category=workflow").first()).toBeVisible();
   await expect(page.getByText("risk_level=low").first()).toBeVisible();
   await closeDrawer(page);
 
+  await expect(page.getByTestId("run-history-entry")).toBeVisible();
   await page.getByTestId("run-history-entry").click();
   await expect(page.getByText("failure_diagnostics").first()).toBeVisible();
   await expect(page.getByText("recoverable").first()).toBeVisible();

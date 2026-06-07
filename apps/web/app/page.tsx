@@ -90,9 +90,11 @@ import { Topbar } from "@/components/Topbar";
 import { UploadPanel } from "@/components/UploadPanel";
 import { VersionLineagePanel } from "@/components/VersionLineagePanel";
 import { VerifiedReferencesPanel } from "@/components/VerifiedReferencesPanel";
+import { WorkspaceExportPanel } from "@/components/WorkspaceExportPanel";
 import { WorkflowTimeline } from "@/components/WorkflowTimeline";
 import {
   getAnalysisProvenance,
+  createWorkspaceExport,
   generateStatisticalAssistant,
   generateAnalysisComparison,
   generateLiteratureMetadataBatchReview,
@@ -127,6 +129,7 @@ import {
   getOutput,
   getProject,
   getProjectExport,
+  getWorkspaceExport,
   getLLMCalls,
   getLLMStatus,
   getPromptRegistry,
@@ -195,6 +198,7 @@ import {
   mockMetadataRevertPreview,
   mockPDFPageTextPreview,
   mockProjectExport,
+  mockWorkspaceExport,
   mockReadinessReport,
   mockReviewerClosureSummary,
   mockIssueResolution,
@@ -339,7 +343,8 @@ import type {
   PatchConflictReport,
   PatchMergePreview,
   TrustSummary,
-  VersionLineage
+  VersionLineage,
+  WorkspaceExportManifest
 } from "@/lib/types";
 
 const workflowOrder = [
@@ -415,6 +420,7 @@ type DetailMode =
   | "readinessReport"
   | "releaseReadiness"
   | "projectExport"
+  | "workspaceExport"
   | "auditExport";
 
 export default function DashboardPage() {
@@ -557,6 +563,8 @@ export default function DashboardPage() {
   const [runHistory, setRunHistory] = useState<RunHistory>(mockRunHistory);
   const [readinessReport, setReadinessReport] = useState<ReadinessReport>(mockReadinessReport);
   const [projectExport, setProjectExport] = useState<ProjectExportInfo>(mockProjectExport);
+  const [workspaceExport, setWorkspaceExport] =
+    useState<WorkspaceExportManifest>(mockWorkspaceExport);
   const [detailLoading, setDetailLoading] = useState(false);
   const [decisionLoadingId, setDecisionLoadingId] = useState<string | null>(null);
   const [issueReviewLoadingId, setIssueReviewLoadingId] = useState<string | null>(null);
@@ -1487,6 +1495,41 @@ export default function DashboardPage() {
       setMessage(`Project export created: ${created.relative_path ?? "mock export"}`);
     } catch {
       setMessage("Project export 生成失败，请检查后端服务和 demo_project。");
+    } finally {
+      setPatchActionLoading(false);
+    }
+  }
+
+  function handleOpenWorkspaceExport() {
+    void openPanel(
+      "workspaceExport",
+      () => (apiOnline ? getWorkspaceExport(project.id) : Promise.resolve(mockWorkspaceExport)),
+      setWorkspaceExport
+    );
+  }
+
+  async function handleRefreshWorkspaceExport() {
+    setDetailLoading(true);
+    try {
+      const latest = apiOnline ? await getWorkspaceExport(project.id) : mockWorkspaceExport;
+      setWorkspaceExport(latest);
+    } catch {
+      setWorkspaceExport(mockWorkspaceExport);
+      setMessage("Workspace export read failed; using mock data.");
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  async function handleCreateWorkspaceExport() {
+    setPatchActionLoading(true);
+    try {
+      const created = apiOnline ? await createWorkspaceExport(project.id) : mockWorkspaceExport;
+      setWorkspaceExport(created);
+      setDetailMode("workspaceExport");
+      setMessage(`Workspace export created: ${created.relative_path ?? "mock export"}`);
+    } catch {
+      setMessage("Workspace export generation failed; check backend service and demo_project.");
     } finally {
       setPatchActionLoading(false);
     }
@@ -2575,6 +2618,14 @@ export default function DashboardPage() {
                   </button>
                   <button
                     className="secondary-button justify-start"
+                    onClick={handleOpenWorkspaceExport}
+                    aria-label="Workspace Export"
+                  >
+                    <FileText size={16} />
+                    <span>Workspace Export</span>
+                  </button>
+                  <button
+                    className="secondary-button justify-start"
                     onClick={handleRunLocalValidation}
                     aria-label="Validate Local MVP"
                   >
@@ -3379,6 +3430,15 @@ export default function DashboardPage() {
         actionLoading={patchActionLoading}
         onCreate={handleCreateProjectExport}
         onRefresh={handleRefreshProjectExport}
+        onClose={closeDetails}
+      />
+      <WorkspaceExportPanel
+        open={detailMode === "workspaceExport"}
+        manifest={workspaceExport}
+        loading={detailLoading}
+        actionLoading={patchActionLoading}
+        onCreate={handleCreateWorkspaceExport}
+        onRefresh={handleRefreshWorkspaceExport}
         onClose={closeDetails}
       />
       <AuditFilterExportPanel

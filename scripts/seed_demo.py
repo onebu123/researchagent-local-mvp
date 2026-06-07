@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import shutil
 import sys
 from pathlib import Path
 
@@ -14,6 +15,15 @@ from app.schemas import ProjectCreate
 from app.services.project_service import project_service
 from app.services.storage_service import storage_service
 from app.tools.literature_index import build_literature_index
+
+
+def reset_demo_project_dir() -> None:
+    project_dir = storage_service.project_dir("demo_project").resolve()
+    expected_dir = (ROOT / "projects" / "demo_project").resolve()
+    if project_dir != expected_dir:
+        raise RuntimeError("refuse to reset unexpected demo project path")
+    if project_dir.exists():
+        shutil.rmtree(project_dir)
 
 
 def write_demo_literature(project_dir: Path) -> None:
@@ -117,6 +127,7 @@ def write_demo_csv(project_dir: Path) -> None:
 
 def main() -> None:
     initialize_database()
+    reset_demo_project_dir()
     payload = ProjectCreate(
         name="新型钙钛矿材料研究",
         domain="materials",

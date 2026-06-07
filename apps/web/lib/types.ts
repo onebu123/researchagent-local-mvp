@@ -150,6 +150,41 @@ export type ProjectExportInfo = {
   message?: string;
 };
 
+export type WorkspaceExportArtifact = {
+  artifact_type: string;
+  relative_path: string;
+  mime_type: string;
+  available: boolean;
+  required: boolean;
+  size_bytes: number;
+  sha256: string | null;
+};
+
+export type WorkspaceExportSourceFile = {
+  relative_path: string;
+  available: boolean;
+  size_bytes: number;
+};
+
+export type WorkspaceExportManifest = {
+  available: boolean;
+  export_id: string;
+  project_id: string;
+  generated_at?: string;
+  relative_path: string | null;
+  export_dir: string;
+  artifacts: WorkspaceExportArtifact[];
+  source_files: WorkspaceExportSourceFile[];
+  safety: {
+    project_relative_paths_only: boolean;
+    secret_scan_passed: boolean;
+    warning_count: number;
+  };
+  warnings: string[];
+  caveats: string[];
+  message?: string;
+};
+
 export type WorkflowRunResponse = {
   project_id: string;
   workflow_status: string;

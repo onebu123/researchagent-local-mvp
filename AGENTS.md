@@ -233,3 +233,14 @@ npx playwright test
 - v1.4 不得覆盖 `manuscript/draft.md`，不得自动改写 manuscript，且不得把 demo data 当真实实验数据。
 - v1.4 API 响应只能返回项目相对路径，不得泄露 API key、secret、完整 prompt、内部绝对路径或堆栈。
 - 前端 `StatisticalAssistantPanel` 必须保留 mock fallback；后端不可用时 dashboard 仍需可渲染。
+
+## ResearchAgent v1.5 开发边界
+
+- `python scripts/validate_v15.py` 必须保持可运行，并继续通过 v1.4 validation 保护既有能力。
+- `Workspace Export` 只能生成本地 workspace 交付摘要：`research_workspace_export.docx`、`research_workspace_export.tex`、`trust_report.md`、`trust_report.json` 和 `workspace_export_manifest.json`。
+- 所有导出 manifest、API 响应和 trust report 只能返回项目相对路径，不得泄露 API key、secret、完整 prompt、stack trace、环境文件内容或本机绝对路径。
+- `research_workspace_export.tex` 只能作为 LaTeX source；v1.5 不做完整 LaTeX 编译。
+- `trust_report.json` 只能总结 local MVP 证据、source coverage、audit hash chain 和 caveats，不得宣称科学事实、统计显著性、因果关系、合规状态或审稿状态已被证明。
+- Workspace Export 不得伪造 DOI、作者、年份、期刊、引用、p-values、significance、causal claims、OCR output 或真实实验结论。
+- Candidate、placeholder、mock provider 产物不得因为被写入 Word、LaTeX 或 trust report 而变成 verified references、formal References 或 formal BibTeX。
+- 前端 `WorkspaceExportPanel` 必须保留 mock fallback；后端不可用时 dashboard 仍需可渲染，但真实导出必须调用后端 API。

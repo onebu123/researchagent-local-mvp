@@ -256,3 +256,32 @@ The frontend `Analysis` group contains `Statistical Assistant` and keeps mock fa
 
 - [v1.4 Acceptance Criteria](docs/v1.4_acceptance_criteria.md)
 - [v1.4 Acceptance Report](docs/v1.4_acceptance_report.md)
+
+## ResearchAgent v1.5 Workspace Export
+
+ResearchAgent v1.5 adds `Workspace Export` for local Word, LaTeX, and trust-report handoff artifacts. It generates:
+
+- `exports/workspace/research_workspace_export.docx`
+- `exports/workspace/research_workspace_export.tex`
+- `exports/workspace/trust_report.md`
+- `exports/workspace/trust_report.json`
+- `exports/workspace/workspace_export_manifest.json`
+
+The export uses only project-relative paths in its manifest and scans text artifacts for secret-like values and local absolute paths. The Word file and LaTeX source summarize existing local MVP artifacts; they do not fabricate DOI, references, p-values, significance, causal claims, OCR output, or scientific conclusions.
+
+v1.5 API:
+
+- `POST /api/projects/{project_id}/export/workspace`
+- `GET /api/projects/{project_id}/export/workspace`
+
+v1.5 commands:
+
+```bash
+python scripts/run_demo.py
+python scripts/validate_v15.py
+```
+
+The frontend dashboard includes `Workspace Export` with mock fallback when the backend is unavailable. v1.5 remains a local MVP export workflow, not for production use, compliance evidence, or peer review submission.
+
+- [v1.5 Acceptance Criteria](docs/v1.5_acceptance_criteria.md)
+- [v1.5 Acceptance Report](docs/v1.5_acceptance_report.md)

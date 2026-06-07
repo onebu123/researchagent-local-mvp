@@ -58,3 +58,13 @@ Project Export 是本地项目材料包，不是生产备份。
 - v1.4 does not generate p-values, does not claim statistical significance, and does not perform causal inference.
 - v1.4 不把 demo data 当真实实验数据，不自动改写 manuscript，也不声明 production-ready、compliance-ready 或 peer-review-ready。
 - `analysis/statistical_assistant_report.json` 和 `analysis/statistical_assistant_notes.md` 只包含项目相对路径，不应包含 API key、secret 或本机绝对路径。
+
+## ResearchAgent v1.5 Workspace Export 的边界
+
+- `Workspace Export` 只打包并总结 local MVP 的既有本地产物，不是备份、发布包、合规档案或投稿证明。
+- `research_workspace_export.docx`、`research_workspace_export.tex`、`trust_report.json`、`trust_report.md` 和 `workspace_export_manifest.json` 只能使用项目相对路径。
+- `research_workspace_export.tex` 只是 LaTeX source；v1.5 不执行完整 LaTeX 编译。
+- `trust_report.json` 只描述本地 workflow evidence、source coverage、audit hash chain 和 caveats，不证明科学事实、统计显著性、因果关系、合规状态或审稿状态。
+- 导出逻辑不得记录 API key、secret、完整 prompt、stack trace、环境文件内容或本机绝对路径。
+- 导出逻辑不得伪造 DOI、作者、年份、期刊、引用、p-values、significance、causal claims、OCR output 或真实实验结论。
+- Candidate 和 placeholder references 不得因为出现在导出文件中而变成 verified references 或正式 BibTeX/References。

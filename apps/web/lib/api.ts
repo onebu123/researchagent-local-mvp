@@ -88,7 +88,8 @@ import type {
   TrustSummary,
   AuditVerifyResult,
   VersionLineage,
-  WorkflowRunResponse
+  WorkflowRunResponse,
+  WorkspaceExportManifest
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -806,6 +807,16 @@ export async function getProjectExport(projectId: string): Promise<ProjectExport
 
 export async function createProjectExport(projectId: string): Promise<ProjectExportInfo> {
   return request<ProjectExportInfo>(`/api/projects/${projectId}/export/zip`, {
+    method: "POST"
+  });
+}
+
+export async function getWorkspaceExport(projectId: string): Promise<WorkspaceExportManifest> {
+  return request<WorkspaceExportManifest>(`/api/projects/${projectId}/export/workspace`);
+}
+
+export async function createWorkspaceExport(projectId: string): Promise<WorkspaceExportManifest> {
+  return request<WorkspaceExportManifest>(`/api/projects/${projectId}/export/workspace`, {
     method: "POST"
   });
 }
@@ -1705,6 +1716,79 @@ export const mockProjectExport: ProjectExportInfo = {
   local_mvp_caveats: [
     "Local MVP export only; not a production backup or compliance archive.",
     "No DOI verification, OCR execution, plagiarism detection, or scientific validity check is performed."
+  ]
+};
+
+export const mockWorkspaceExport: WorkspaceExportManifest = {
+  available: true,
+  export_id: "workspace_export_v15",
+  project_id: "demo_project",
+  generated_at: new Date().toISOString(),
+  relative_path: "exports/workspace/workspace_export_manifest.json",
+  export_dir: "exports/workspace",
+  artifacts: [
+    {
+      artifact_type: "word_docx",
+      relative_path: "exports/workspace/research_workspace_export.docx",
+      mime_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      available: true,
+      required: true,
+      size_bytes: 16384,
+      sha256: "mock_docx_sha256"
+    },
+    {
+      artifact_type: "latex_source",
+      relative_path: "exports/workspace/research_workspace_export.tex",
+      mime_type: "application/x-tex",
+      available: true,
+      required: true,
+      size_bytes: 4096,
+      sha256: "mock_latex_sha256"
+    },
+    {
+      artifact_type: "trust_report_markdown",
+      relative_path: "exports/workspace/trust_report.md",
+      mime_type: "text/markdown",
+      available: true,
+      required: true,
+      size_bytes: 3072,
+      sha256: "mock_trust_md_sha256"
+    },
+    {
+      artifact_type: "trust_report_json",
+      relative_path: "exports/workspace/trust_report.json",
+      mime_type: "application/json",
+      available: true,
+      required: true,
+      size_bytes: 6144,
+      sha256: "mock_trust_json_sha256"
+    },
+    {
+      artifact_type: "workspace_export_manifest",
+      relative_path: "exports/workspace/workspace_export_manifest.json",
+      mime_type: "application/json",
+      available: true,
+      required: true,
+      size_bytes: 2048,
+      sha256: null
+    }
+  ],
+  source_files: [
+    { relative_path: "manuscript/draft.md", available: true, size_bytes: 1800 },
+    { relative_path: "trust/trust_summary.json", available: true, size_bytes: 2200 },
+    { relative_path: "provenance/citation_grounding_report.json", available: true, size_bytes: 1400 },
+    { relative_path: "audit/audit_log.jsonl", available: true, size_bytes: 900 }
+  ],
+  safety: {
+    project_relative_paths_only: true,
+    secret_scan_passed: true,
+    warning_count: 0
+  },
+  warnings: [],
+  caveats: [
+    "Workspace export is a local MVP artifact package, not a production backup.",
+    "Generated DOCX and LaTeX are drafts for human review.",
+    "The trust report is a local workflow summary, not scientific or compliance validation."
   ]
 };
 
