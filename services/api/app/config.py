@@ -15,6 +15,9 @@ class Settings:
     llm_base_url: str
     llm_api_key: str
     llm_model: str
+    llm_provider: str
+    llm_timeout_seconds: float
+    llm_max_retries: int
 
 
 def _resolve_path(raw: str | None, default: Path, base: Path) -> Path:
@@ -47,6 +50,9 @@ def get_settings() -> Settings:
         llm_base_url=os.getenv("LLM_BASE_URL", "https://api.openai.com/v1"),
         llm_api_key=os.getenv("LLM_API_KEY", ""),
         llm_model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
+        llm_provider=os.getenv("LLM_PROVIDER", "openai-compatible"),
+        llm_timeout_seconds=float(os.getenv("LLM_TIMEOUT_SECONDS", "20")),
+        llm_max_retries=max(int(os.getenv("LLM_MAX_RETRIES", "1")), 0),
     )
 
 

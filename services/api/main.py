@@ -3,7 +3,20 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import export, literature, logs, manuscript, outputs, projects, review, trust, uploads, workflow
+from app.api import (
+    export,
+    intelligence,
+    literature,
+    logs,
+    manuscript,
+    outputs,
+    projects,
+    review,
+    system,
+    trust,
+    uploads,
+    workflow,
+)
 from app.database import initialize_database
 
 
@@ -48,3 +61,5 @@ app.include_router(manuscript.router, prefix="/api", tags=["manuscript"])
 app.include_router(logs.router, prefix="/api", tags=["logs"])
 app.include_router(trust.router, prefix="/api", tags=["trust"])
 app.include_router(export.router, prefix="/api", tags=["export"])
+app.include_router(system.router, prefix="/api", tags=["system"])
+app.include_router(intelligence.router, prefix="/api", tags=["literature-intelligence"])

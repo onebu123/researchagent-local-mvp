@@ -18,10 +18,18 @@ EXPORT_ROOTS = [
     "trust",
     "analysis",
     "figures",
+    "llm",
 ]
 EXPORT_SINGLE_FILES = [
     "literature/literature_index.json",
     "literature/pdf_quality_report.json",
+    "literature/references.bib",
+    "literature/bibtex_report.json",
+    "literature/reference_approvals.jsonl",
+    "literature/reference_approval_summary.json",
+    "manuscript/references_status.json",
+    "manuscript/references_section_preview.md",
+    "provenance/citation_grounding_report.json",
     "runs/run_history.json",
     "audit/audit_log.jsonl",
 ]
@@ -29,6 +37,8 @@ EXPORT_PREFIXES = [
     "audit/exports",
     "audit/filtered_exports",
     "literature/parsed",
+    "literature/rag",
+    "literature/reference_verification",
 ]
 EXPORT_GLOBS = [
     "literature/metadata*.json",
@@ -60,6 +70,7 @@ SENSITIVE_FILE_MARKERS = {
 }
 TEXT_SUFFIXES = {
     ".csv",
+    ".bib",
     ".json",
     ".jsonl",
     ".log",

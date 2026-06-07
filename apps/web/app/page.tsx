@@ -8,6 +8,7 @@ import {
   BookOpenCheck,
   Bot,
   BrainCircuit,
+  ClipboardCheck,
   Database,
   FileArchive,
   FileCheck2,
@@ -17,6 +18,7 @@ import {
   GitBranch,
   History,
   LineChart,
+  Link2,
   PenLine,
   ScrollText,
   SearchCheck,
@@ -38,10 +40,17 @@ import { EvidencePanel } from "@/components/EvidencePanel";
 import { FigureProvenancePanel } from "@/components/FigureProvenancePanel";
 import { GlobalTrustDashboard } from "@/components/GlobalTrustDashboard";
 import { IssueResolutionPanel } from "@/components/IssueResolutionPanel";
+import { BibTeXPanel } from "@/components/BibTeXPanel";
+import { CitationSupportPanel } from "@/components/CitationSupportPanel";
+import { CitationGroundingPanel } from "@/components/CitationGroundingPanel";
+import { LLMCallLogPanel } from "@/components/LLMCallLogPanel";
+import { LLMSettingsPanel } from "@/components/LLMSettingsPanel";
 import { LiteratureHistoryPanel } from "@/components/LiteratureHistoryPanel";
 import { LiteratureMetadataBatchPanel } from "@/components/LiteratureMetadataBatchPanel";
 import { LiteratureMetadataDiffPanel } from "@/components/LiteratureMetadataDiffPanel";
 import { LiteratureMetadataPanel } from "@/components/LiteratureMetadataPanel";
+import { LiteratureMetadataLookupPanel } from "@/components/LiteratureMetadataLookupPanel";
+import { LiteratureRAGPanel } from "@/components/LiteratureRAGPanel";
 import { LocalMVPOverviewPanel } from "@/components/LocalMVPOverviewPanel";
 import { ManuscriptDiffPanel } from "@/components/ManuscriptDiffPanel";
 import { ManuscriptPatchPanel } from "@/components/ManuscriptPatchPanel";
@@ -70,11 +79,15 @@ import { ReviewerClosurePanel } from "@/components/ReviewerClosurePanel";
 import { RunHistoryPanel } from "@/components/RunHistoryPanel";
 import { SentenceIssuesPanel } from "@/components/SentenceIssuesPanel";
 import { Sidebar } from "@/components/Sidebar";
+import { SourcePassageEvidencePanel } from "@/components/SourcePassageEvidencePanel";
+import { ReferenceApprovalPanel } from "@/components/ReferenceApprovalPanel";
+import { ReferenceVerificationPanel } from "@/components/ReferenceVerificationPanel";
 import { StatCard } from "@/components/StatCard";
 import { TaskCenter } from "@/components/TaskCenter";
 import { Topbar } from "@/components/Topbar";
 import { UploadPanel } from "@/components/UploadPanel";
 import { VersionLineagePanel } from "@/components/VersionLineagePanel";
+import { VerifiedReferencesPanel } from "@/components/VerifiedReferencesPanel";
 import { WorkflowTimeline } from "@/components/WorkflowTimeline";
 import {
   getAnalysisProvenance,
@@ -111,6 +124,18 @@ import {
   getOutput,
   getProject,
   getProjectExport,
+  getLLMCalls,
+  getLLMStatus,
+  getPromptRegistry,
+  getLiteratureRAGAnswers,
+  getLiteratureRAGChunks,
+  getSourcePassageEvidence,
+  getMetadataLookupResults,
+  getBibTeX,
+  getCitationSupport,
+  getCitationGrounding,
+  getManuscriptReferencesPreview,
+  getManuscriptReferencesStatus,
   getPDFQualityReport,
   getPDFPageReviews,
   getPDFPageTextPreview,
@@ -126,6 +151,13 @@ import {
   checkPatchConflicts,
   confirmPatchMerge,
   generateManuscriptPatch,
+  generateBibTeX,
+  getReferenceApprovals,
+  getReferenceApprovalSummary,
+  getReferenceVerificationResults,
+  getReferenceVerificationSummary,
+  buildLiteratureRAG,
+  askLiteratureRAG,
   generateManuscriptDiff,
   generatePatchMergePreview,
   listProjects,
@@ -157,8 +189,20 @@ import {
   mockReadinessReport,
   mockReviewerClosureSummary,
   mockIssueResolution,
+  mockBibTeX,
+  mockCitationSupport,
+  mockCitationGrounding,
+  mockLLMCalls,
+  mockLLMStatus,
+  mockLLMTestResult,
   mockLiterature,
+  mockLiteratureRAGAnswers,
+  mockLiteratureRAGChunks,
+  mockLiteratureRAGIndex,
   mockLiteratureHistory,
+  mockMetadataLookupResults,
+  mockManuscriptReferencesPreview,
+  mockManuscriptReferencesStatus,
   mockLiteratureMetadataBatch,
   mockLiteratureMetadataDiff,
   mockMetadataReviewActions,
@@ -178,6 +222,12 @@ import {
   mockSentenceIssues,
   mockPatchConflictReport,
   mockPatchMergePreview,
+  mockPromptRegistry,
+  mockReferenceApprovals,
+  mockReferenceApprovalSummary,
+  mockReferenceVerificationResults,
+  mockReferenceVerificationSummary,
+  mockSourcePassageEvidence,
   mockVersionLineage,
   patchLiterature,
   reviewEvidenceClaim,
@@ -186,7 +236,11 @@ import {
   reviewRevisionDiffChange,
   recordIssueResolutionReview,
   runWorkflow,
+  approveReferenceVerification,
+  runReferenceVerification,
+  runMetadataLookup,
   safetyCheckManuscriptPatchItem,
+  testLLM,
   uploadFile,
   suggestLiteratureMetadataRevert,
   verifyAuditLog,
@@ -209,17 +263,27 @@ import type {
   AuditExportSummary,
   AuditLogEntry,
   AuditVerifyResult,
+  BibTeXResponse,
+  CitationGroundingReport,
+  CitationSupportReport,
   ClaimAlignment,
   EvidenceClaim,
   EvidenceClaimReviewStatus,
   EvidenceClaimReviewsResponse,
   FigureProvenanceRecord,
   IssueResolution,
+  LLMCallLogEntry,
+  LLMStatus,
+  LLMTestResult,
   LiteratureHistoryEntry,
+  LiteratureMetadataLookupResponse,
   LiteratureMetadataBatchReview,
   LiteratureMetadataDiffReport,
   LiteratureMetadataRevertSuggestion,
   LiteraturePatch,
+  LiteratureRAGAnswer,
+  LiteratureRAGChunk,
+  LiteratureRAGIndex,
   LiteratureRecord,
   MetadataRevertPreview,
   MetadataReviewActionValue,
@@ -229,15 +293,24 @@ import type {
   ManuscriptPatch,
   ManuscriptPatchItem,
   ManuscriptPatchPreview,
+  ManuscriptReferencesPreview,
+  ManuscriptReferencesStatus,
   ManuscriptVersionContent,
   ManuscriptVersionHistory,
   OutputContent,
   OutputItem,
   ProjectDetail,
   ProjectExportInfo,
+  ReferenceApproval,
+  ReferenceApprovalDecision,
+  ReferenceApprovalSummaryResponse,
+  ReferenceVerificationProvider,
+  ReferenceVerificationResult,
+  ReferenceVerificationSummaryResponse,
   PDFQualityReport,
   PDFPageReviewsResponse,
   PDFPageTextPreviewResponse,
+  PromptRegistry,
   ReadinessReport,
   RevisionDecision,
   RevisionDiffHumanStatus,
@@ -246,6 +319,7 @@ import type {
   RevisionLineDiff,
   RunHistory,
   SentenceIssue,
+  SourcePassageEvidenceReport,
   PatchConflictReport,
   PatchMergePreview,
   TrustSummary,
@@ -281,6 +355,17 @@ type DetailMode =
   | "claimAlignment"
   | "sentenceIssues"
   | "literature"
+  | "llmSettings"
+  | "llmCallLog"
+  | "literatureRag"
+  | "sourcePassageEvidence"
+  | "literatureMetadataLookup"
+  | "referenceVerification"
+  | "referenceApproval"
+  | "verifiedReferences"
+  | "citationGrounding"
+  | "bibtex"
+  | "citationSupport"
   | "analysisProvenance"
   | "revisionDiff"
   | "revisionLineDiff"
@@ -333,6 +418,40 @@ export default function DashboardPage() {
   const [claimAlignment, setClaimAlignment] = useState<ClaimAlignment>(mockClaimAlignment);
   const [sentenceIssues, setSentenceIssues] = useState<SentenceIssue[]>(mockSentenceIssues);
   const [literature, setLiterature] = useState<LiteratureRecord[]>(mockLiterature);
+  const [llmStatus, setLLMStatus] = useState<LLMStatus>(mockLLMStatus);
+  const [llmTestResult, setLLMTestResult] = useState<LLMTestResult | undefined>(mockLLMTestResult);
+  const [promptRegistry, setPromptRegistry] = useState<PromptRegistry>(mockPromptRegistry);
+  const [llmCalls, setLLMCalls] = useState<LLMCallLogEntry[]>(mockLLMCalls);
+  const [literatureRagIndex, setLiteratureRagIndex] =
+    useState<LiteratureRAGIndex | undefined>(mockLiteratureRAGIndex);
+  const [literatureRagChunks, setLiteratureRagChunks] =
+    useState<LiteratureRAGChunk[]>(mockLiteratureRAGChunks);
+  const [literatureRagAnswers, setLiteratureRagAnswers] =
+    useState<LiteratureRAGAnswer[]>(mockLiteratureRAGAnswers);
+  const [sourcePassageEvidence, setSourcePassageEvidence] =
+    useState<SourcePassageEvidenceReport>(mockSourcePassageEvidence);
+  const [metadataLookupProvider, setMetadataLookupProvider] = useState("mock_fixture");
+  const [metadataLookupResults, setMetadataLookupResults] =
+    useState<LiteratureMetadataLookupResponse>(mockMetadataLookupResults);
+  const [bibtex, setBibtex] = useState<BibTeXResponse>(mockBibTeX);
+  const [citationSupport, setCitationSupport] =
+    useState<CitationSupportReport>(mockCitationSupport);
+  const [referenceVerificationProvider, setReferenceVerificationProvider] =
+    useState<ReferenceVerificationProvider>("mock_fixture");
+  const [referenceVerificationResults, setReferenceVerificationResults] =
+    useState<ReferenceVerificationResult[]>(mockReferenceVerificationResults);
+  const [referenceVerificationSummary, setReferenceVerificationSummary] =
+    useState<ReferenceVerificationSummaryResponse>(mockReferenceVerificationSummary);
+  const [referenceApprovals, setReferenceApprovals] =
+    useState<ReferenceApproval[]>(mockReferenceApprovals);
+  const [referenceApprovalSummary, setReferenceApprovalSummary] =
+    useState<ReferenceApprovalSummaryResponse>(mockReferenceApprovalSummary);
+  const [citationGrounding, setCitationGrounding] =
+    useState<CitationGroundingReport>(mockCitationGrounding);
+  const [manuscriptReferencesStatus, setManuscriptReferencesStatus] =
+    useState<ManuscriptReferencesStatus>(mockManuscriptReferencesStatus);
+  const [manuscriptReferencesPreview, setManuscriptReferencesPreview] =
+    useState<ManuscriptReferencesPreview>(mockManuscriptReferencesPreview);
   const [analysisProvenance, setAnalysisProvenance] =
     useState<AnalysisProvenance>(mockAnalysisProvenance);
   const [revisionDecisions, setRevisionDecisions] =
@@ -670,6 +789,352 @@ export default function DashboardPage() {
       () => (apiOnline ? getLiterature(project.id) : Promise.resolve(mockLiterature)),
       setLiterature
     );
+  }
+
+  function handleOpenLLMSettings() {
+    setDetailMode("llmSettings");
+    setDetailLoading(true);
+    const loadStatus = apiOnline ? getLLMStatus() : Promise.resolve(mockLLMStatus);
+    const loadPrompts = apiOnline ? getPromptRegistry() : Promise.resolve(mockPromptRegistry);
+    void Promise.all([loadStatus, loadPrompts])
+      .then(([status, prompts]) => {
+        setLLMStatus(status);
+        setPromptRegistry(prompts);
+      })
+      .catch(() => {
+        setLLMStatus(mockLLMStatus);
+        setPromptRegistry(mockPromptRegistry);
+        setMessage("LLM settings read failed; using mock data.");
+      })
+      .finally(() => setDetailLoading(false));
+  }
+
+  async function handleRefreshLLMSettings() {
+    try {
+      if (apiOnline) {
+        setLLMStatus(await getLLMStatus());
+        setPromptRegistry(await getPromptRegistry());
+      } else {
+        setLLMStatus(mockLLMStatus);
+        setPromptRegistry(mockPromptRegistry);
+      }
+    } catch {
+      setMessage("LLM settings refresh failed.");
+    }
+  }
+
+  async function handleTestLLM(prompt: string) {
+    setPatchActionLoading(true);
+    try {
+      const result = apiOnline ? await testLLM(prompt) : mockLLMTestResult;
+      setLLMTestResult(result);
+      setMessage("LLM test completed without exposing API keys.");
+    } catch {
+      setLLMTestResult(mockLLMTestResult);
+      setMessage("LLM test failed; using mock result.");
+    } finally {
+      setPatchActionLoading(false);
+    }
+  }
+
+  function handleOpenLLMCallLog() {
+    void openPanel(
+      "llmCallLog",
+      () => (apiOnline ? getLLMCalls(project.id) : Promise.resolve(mockLLMCalls)),
+      setLLMCalls
+    );
+  }
+
+  function handleOpenLiteratureRAG() {
+    setDetailMode("literatureRag");
+    setDetailLoading(true);
+    const loadChunks = apiOnline
+      ? getLiteratureRAGChunks(project.id)
+      : Promise.resolve(mockLiteratureRAGChunks);
+    const loadAnswers = apiOnline
+      ? getLiteratureRAGAnswers(project.id)
+      : Promise.resolve(mockLiteratureRAGAnswers);
+    void Promise.all([loadChunks, loadAnswers])
+      .then(([chunks, answers]) => {
+        setLiteratureRagChunks(chunks.length ? chunks : mockLiteratureRAGChunks);
+        setLiteratureRagAnswers(answers.length ? answers : mockLiteratureRAGAnswers);
+      })
+      .catch(() => {
+        setLiteratureRagChunks(mockLiteratureRAGChunks);
+        setLiteratureRagAnswers(mockLiteratureRAGAnswers);
+        setMessage("Literature RAG read failed; using mock data.");
+      })
+      .finally(() => setDetailLoading(false));
+  }
+
+  async function handleBuildLiteratureRAG() {
+    setPatchActionLoading(true);
+    try {
+      const index = apiOnline ? await buildLiteratureRAG(project.id) : mockLiteratureRAGIndex;
+      const chunks = apiOnline ? await getLiteratureRAGChunks(project.id) : mockLiteratureRAGChunks;
+      setLiteratureRagIndex(index);
+      setLiteratureRagChunks(chunks.length ? chunks : mockLiteratureRAGChunks);
+      setMessage("Literature RAG index built from local parsed text.");
+    } catch {
+      setLiteratureRagIndex(mockLiteratureRAGIndex);
+      setLiteratureRagChunks(mockLiteratureRAGChunks);
+      setMessage("Literature RAG build failed; using mock data.");
+    } finally {
+      setPatchActionLoading(false);
+    }
+  }
+
+  async function handleAskLiteratureRAG(question: string) {
+    setPatchActionLoading(true);
+    try {
+      const answer = apiOnline ? await askLiteratureRAG(project.id, question) : mockLiteratureRAGAnswers[0];
+      setLiteratureRagAnswers((current) => [
+        answer,
+        ...current.filter((item) => item.answer_id !== answer.answer_id)
+      ]);
+      setMessage("Literature RAG answer generated with source passage links.");
+    } catch {
+      setLiteratureRagAnswers(mockLiteratureRAGAnswers);
+      setMessage("Literature RAG ask failed; using mock data.");
+    } finally {
+      setPatchActionLoading(false);
+    }
+  }
+
+  function handleOpenSourcePassageEvidence() {
+    void openPanel(
+      "sourcePassageEvidence",
+      () =>
+        apiOnline
+          ? getSourcePassageEvidence(project.id)
+          : Promise.resolve(mockSourcePassageEvidence),
+      setSourcePassageEvidence
+    );
+  }
+
+  function handleOpenMetadataLookup() {
+    void openPanel(
+      "literatureMetadataLookup",
+      () =>
+        apiOnline
+          ? getMetadataLookupResults(project.id)
+          : Promise.resolve(mockMetadataLookupResults),
+      setMetadataLookupResults
+    );
+  }
+
+  async function handleRunMetadataLookup() {
+    setPatchActionLoading(true);
+    try {
+      const result = apiOnline
+        ? await runMetadataLookup(project.id, metadataLookupProvider)
+        : mockMetadataLookupResults;
+      setMetadataLookupResults(result);
+      setMessage("Metadata lookup completed without modifying literature_index.json.");
+    } catch {
+      setMetadataLookupResults(mockMetadataLookupResults);
+      setMessage("Metadata lookup failed; using mock data.");
+    } finally {
+      setPatchActionLoading(false);
+    }
+  }
+
+  function handleOpenBibTeX() {
+    void openPanel(
+      "bibtex",
+      () => (apiOnline ? getBibTeX(project.id) : Promise.resolve(mockBibTeX)),
+      setBibtex
+    );
+  }
+
+  async function handleGenerateBibTeX() {
+    setPatchActionLoading(true);
+    try {
+      const result = apiOnline ? await generateBibTeX(project.id) : mockBibTeX;
+      setBibtex(result);
+      setMessage("BibTeX draft generated with verified-only formal entries.");
+    } catch {
+      setBibtex(mockBibTeX);
+      setMessage("BibTeX generation failed; using mock data.");
+    } finally {
+      setPatchActionLoading(false);
+    }
+  }
+
+  function handleOpenCitationSupport() {
+    void openPanel(
+      "citationSupport",
+      () => (apiOnline ? getCitationSupport(project.id) : Promise.resolve(mockCitationSupport)),
+      setCitationSupport
+    );
+  }
+
+  function handleOpenReferenceVerification() {
+    setDetailMode("referenceVerification");
+    setDetailLoading(true);
+    const loadResults = apiOnline
+      ? getReferenceVerificationResults(project.id)
+      : Promise.resolve(mockReferenceVerificationResults);
+    const loadSummary = apiOnline
+      ? getReferenceVerificationSummary(project.id)
+      : Promise.resolve(mockReferenceVerificationSummary);
+    void Promise.all([loadResults, loadSummary])
+      .then(([results, summary]) => {
+        setReferenceVerificationResults(results.length ? results : mockReferenceVerificationResults);
+        setReferenceVerificationSummary(summary);
+      })
+      .catch(() => {
+        setReferenceVerificationResults(mockReferenceVerificationResults);
+        setReferenceVerificationSummary(mockReferenceVerificationSummary);
+        setMessage("Reference verification read failed; using mock data.");
+      })
+      .finally(() => setDetailLoading(false));
+  }
+
+  async function handleRunReferenceVerification() {
+    setPatchActionLoading(true);
+    try {
+      const result = apiOnline
+        ? await runReferenceVerification(project.id, referenceVerificationProvider)
+        : {
+            results: mockReferenceVerificationResults,
+            summary: mockReferenceVerificationSummary,
+            literature_index_modified: false
+          };
+      setReferenceVerificationResults(result.results.length ? result.results : mockReferenceVerificationResults);
+      setReferenceVerificationSummary(result.summary);
+      setMessage("Reference verification candidates generated without modifying literature_index.json.");
+    } catch {
+      setReferenceVerificationResults(mockReferenceVerificationResults);
+      setReferenceVerificationSummary(mockReferenceVerificationSummary);
+      setMessage("Reference verification failed; using mock data.");
+    } finally {
+      setPatchActionLoading(false);
+    }
+  }
+
+  function handleOpenReferenceApproval() {
+    setDetailMode("referenceApproval");
+    setDetailLoading(true);
+    const loadResults = apiOnline
+      ? getReferenceVerificationResults(project.id)
+      : Promise.resolve(mockReferenceVerificationResults);
+    const loadApprovals = apiOnline
+      ? getReferenceApprovals(project.id)
+      : Promise.resolve(mockReferenceApprovals);
+    const loadSummary = apiOnline
+      ? getReferenceApprovalSummary(project.id)
+      : Promise.resolve(mockReferenceApprovalSummary);
+    void Promise.all([loadResults, loadApprovals, loadSummary])
+      .then(([results, approvals, summary]) => {
+        setReferenceVerificationResults(results.length ? results : mockReferenceVerificationResults);
+        setReferenceApprovals(approvals.length ? approvals : mockReferenceApprovals);
+        setReferenceApprovalSummary(summary);
+      })
+      .catch(() => {
+        setReferenceVerificationResults(mockReferenceVerificationResults);
+        setReferenceApprovals(mockReferenceApprovals);
+        setReferenceApprovalSummary(mockReferenceApprovalSummary);
+        setMessage("Reference approval read failed; using mock data.");
+      })
+      .finally(() => setDetailLoading(false));
+  }
+
+  async function handleReferenceApprovalDecision(
+    verificationId: string,
+    decision: ReferenceApprovalDecision,
+    applyToLiteratureIndex: boolean
+  ) {
+    setPatchActionLoading(true);
+    try {
+      const result = apiOnline
+        ? await approveReferenceVerification(
+            project.id,
+            verificationId,
+            decision,
+            applyToLiteratureIndex
+              ? "Human approved and explicitly applied to literature_index.json."
+              : "Human decision recorded without applying to literature_index.json.",
+            applyToLiteratureIndex
+          )
+        : {
+            ...mockReferenceApprovals[0],
+            approval_id: `ref_approval_${Date.now()}`,
+            verification_id: verificationId,
+            decision,
+            apply_to_literature_index: applyToLiteratureIndex,
+            applied_to_literature_index: false,
+            literature_index_modified: false,
+            summary: mockReferenceApprovalSummary,
+            applied_record: null
+          };
+      setReferenceApprovals((current) => [result, ...current]);
+      setReferenceApprovalSummary(result.summary);
+      if (apiOnline) {
+        const results = await getReferenceVerificationResults(project.id);
+        setReferenceVerificationResults(results);
+      }
+      setMessage(
+        applyToLiteratureIndex
+          ? "Reference approval applied to literature_index.json with metadata history."
+          : "Reference approval recorded without modifying literature_index.json."
+      );
+    } catch {
+      setMessage("Reference approval action failed.");
+    } finally {
+      setPatchActionLoading(false);
+    }
+  }
+
+  function handleOpenCitationGrounding() {
+    void openPanel(
+      "citationGrounding",
+      () => (apiOnline ? getCitationGrounding(project.id) : Promise.resolve(mockCitationGrounding)),
+      setCitationGrounding
+    );
+  }
+
+  function handleOpenVerifiedReferences() {
+    setDetailMode("verifiedReferences");
+    setDetailLoading(true);
+    const loadStatus = apiOnline
+      ? getManuscriptReferencesStatus(project.id)
+      : Promise.resolve(mockManuscriptReferencesStatus);
+    const loadPreview = apiOnline
+      ? getManuscriptReferencesPreview(project.id)
+      : Promise.resolve(mockManuscriptReferencesPreview);
+    void Promise.all([loadStatus, loadPreview])
+      .then(([status, preview]) => {
+        setManuscriptReferencesStatus(status);
+        setManuscriptReferencesPreview(preview);
+      })
+      .catch(() => {
+        setManuscriptReferencesStatus(mockManuscriptReferencesStatus);
+        setManuscriptReferencesPreview(mockManuscriptReferencesPreview);
+        setMessage("Verified references read failed; using mock data.");
+      })
+      .finally(() => setDetailLoading(false));
+  }
+
+  async function handleRefreshVerifiedReferences() {
+    setPatchActionLoading(true);
+    try {
+      const status = apiOnline
+        ? await getManuscriptReferencesStatus(project.id)
+        : mockManuscriptReferencesStatus;
+      const preview = apiOnline
+        ? await getManuscriptReferencesPreview(project.id)
+        : mockManuscriptReferencesPreview;
+      setManuscriptReferencesStatus(status);
+      setManuscriptReferencesPreview(preview);
+      setMessage("Verified References preview refreshed without overwriting draft.md.");
+    } catch {
+      setManuscriptReferencesStatus(mockManuscriptReferencesStatus);
+      setManuscriptReferencesPreview(mockManuscriptReferencesPreview);
+      setMessage("Verified References refresh failed; using mock data.");
+    } finally {
+      setPatchActionLoading(false);
+    }
   }
 
   function handleOpenAnalysisProvenance() {
@@ -2035,6 +2500,124 @@ export default function DashboardPage() {
                     <BookOpenCheck size={16} />
                     <span>文献元数据核验</span>
                   </button>
+                  <div className="mt-3 text-xs font-black uppercase text-slate-400">
+                    Literature Intelligence
+                  </div>
+                  <button
+                    className="secondary-button justify-start"
+                    onClick={handleOpenLLMSettings}
+                    aria-label="LLM Settings"
+                  >
+                    <Bot size={16} />
+                    <span>LLM Settings</span>
+                  </button>
+                  <button
+                    className="secondary-button justify-start"
+                    onClick={handleOpenLLMSettings}
+                    aria-label="Prompt Registry"
+                  >
+                    <BrainCircuit size={16} />
+                    <span>Prompt Registry</span>
+                  </button>
+                  <button
+                    className="secondary-button justify-start"
+                    onClick={handleOpenLiteratureRAG}
+                    aria-label="Literature RAG"
+                  >
+                    <SearchCheck size={16} />
+                    <span>Literature RAG</span>
+                  </button>
+                  <button
+                    className="secondary-button justify-start"
+                    onClick={handleOpenSourcePassageEvidence}
+                    aria-label="Source Passage Evidence"
+                  >
+                    <FileText size={16} />
+                    <span>Source Passage Evidence</span>
+                  </button>
+                  <button
+                    className="secondary-button justify-start"
+                    onClick={handleOpenMetadataLookup}
+                    aria-label="Metadata Lookup"
+                  >
+                    <Database size={16} />
+                    <span>Metadata Lookup</span>
+                  </button>
+                  <button
+                    className="secondary-button justify-start"
+                    onClick={() => {
+                      setDetailMode("referenceVerification");
+                      void handleRunReferenceVerification();
+                    }}
+                    aria-label="Run Reference Verification"
+                  >
+                    <SearchCheck size={16} />
+                    <span>Run Reference Verification</span>
+                  </button>
+                  <button
+                    className="secondary-button justify-start"
+                    onClick={handleOpenReferenceVerification}
+                    aria-label="Verification Results"
+                  >
+                    <SearchCheck size={16} />
+                    <span>Verification Results</span>
+                  </button>
+                  <button
+                    className="secondary-button justify-start"
+                    onClick={handleOpenReferenceApproval}
+                    aria-label="Approval Workflow"
+                  >
+                    <ClipboardCheck size={16} />
+                    <span>Approval Workflow</span>
+                  </button>
+                  <button
+                    className="secondary-button justify-start"
+                    onClick={handleOpenVerifiedReferences}
+                    aria-label="Verified References"
+                  >
+                    <BookOpenCheck size={16} />
+                    <span>Verified References</span>
+                  </button>
+                  <button
+                    className="secondary-button justify-start"
+                    onClick={handleOpenCitationGrounding}
+                    aria-label="Citation Grounding"
+                  >
+                    <Link2 size={16} />
+                    <span>Citation Grounding</span>
+                  </button>
+                  <button
+                    className="secondary-button justify-start"
+                    onClick={handleOpenBibTeX}
+                    aria-label="BibTeX Status"
+                  >
+                    <BookOpenCheck size={16} />
+                    <span>BibTeX Status</span>
+                  </button>
+                  <button
+                    className="secondary-button justify-start"
+                    onClick={handleOpenBibTeX}
+                    aria-label="BibTeX"
+                  >
+                    <BookOpenCheck size={16} />
+                    <span>BibTeX</span>
+                  </button>
+                  <button
+                    className="secondary-button justify-start"
+                    onClick={handleOpenCitationSupport}
+                    aria-label="Citation Support"
+                  >
+                    <ShieldCheck size={16} />
+                    <span>Citation Support</span>
+                  </button>
+                  <button
+                    className="secondary-button justify-start"
+                    onClick={handleOpenLLMCallLog}
+                    aria-label="LLM Call Log"
+                  >
+                    <ScrollText size={16} />
+                    <span>LLM Call Log</span>
+                  </button>
                   <div className="mt-3 text-xs font-black uppercase text-slate-400">Analysis</div>
                   <button className="secondary-button justify-start" onClick={handleOpenAnalysisProvenance}>
                     <Activity size={16} />
@@ -2281,6 +2864,10 @@ export default function DashboardPage() {
       <GlobalTrustDashboard
         open={detailMode === "globalTrust"}
         summary={trustSummary}
+        referenceVerificationSummary={referenceVerificationSummary}
+        referenceApprovalSummary={referenceApprovalSummary}
+        citationGrounding={citationGrounding}
+        manuscriptReferencesStatus={manuscriptReferencesStatus}
         loading={detailLoading}
         onOpenReadiness={handleOpenReadinessReport}
         onClose={closeDetails}
@@ -2417,6 +3004,100 @@ export default function DashboardPage() {
         records={literature}
         loading={detailLoading}
         onSave={handleSaveLiterature}
+        onClose={closeDetails}
+      />
+      <LLMSettingsPanel
+        open={detailMode === "llmSettings"}
+        status={llmStatus}
+        promptRegistry={promptRegistry}
+        testResult={llmTestResult}
+        loading={detailLoading}
+        actionLoading={patchActionLoading}
+        onRefresh={handleRefreshLLMSettings}
+        onTest={handleTestLLM}
+        onClose={closeDetails}
+      />
+      <LLMCallLogPanel
+        open={detailMode === "llmCallLog"}
+        entries={llmCalls}
+        loading={detailLoading}
+        onClose={closeDetails}
+      />
+      <LiteratureRAGPanel
+        open={detailMode === "literatureRag"}
+        index={literatureRagIndex}
+        chunks={literatureRagChunks}
+        answers={literatureRagAnswers}
+        loading={detailLoading}
+        actionLoading={patchActionLoading}
+        onBuild={handleBuildLiteratureRAG}
+        onAsk={handleAskLiteratureRAG}
+        onClose={closeDetails}
+      />
+      <SourcePassageEvidencePanel
+        open={detailMode === "sourcePassageEvidence"}
+        report={sourcePassageEvidence}
+        loading={detailLoading}
+        onClose={closeDetails}
+      />
+      <LiteratureMetadataLookupPanel
+        open={detailMode === "literatureMetadataLookup"}
+        result={metadataLookupResults}
+        provider={metadataLookupProvider}
+        loading={detailLoading}
+        actionLoading={patchActionLoading}
+        onProviderChange={setMetadataLookupProvider}
+        onRun={handleRunMetadataLookup}
+        onClose={closeDetails}
+      />
+      <BibTeXPanel
+        open={detailMode === "bibtex"}
+        data={bibtex}
+        loading={detailLoading}
+        actionLoading={patchActionLoading}
+        onGenerate={handleGenerateBibTeX}
+        onClose={closeDetails}
+      />
+      <CitationSupportPanel
+        open={detailMode === "citationSupport"}
+        report={citationSupport}
+        loading={detailLoading}
+        onClose={closeDetails}
+      />
+      <ReferenceVerificationPanel
+        open={detailMode === "referenceVerification"}
+        results={referenceVerificationResults}
+        summary={referenceVerificationSummary}
+        provider={referenceVerificationProvider}
+        loading={detailLoading}
+        actionLoading={patchActionLoading}
+        onProviderChange={setReferenceVerificationProvider}
+        onRun={handleRunReferenceVerification}
+        onClose={closeDetails}
+      />
+      <ReferenceApprovalPanel
+        open={detailMode === "referenceApproval"}
+        results={referenceVerificationResults}
+        approvals={referenceApprovals}
+        summary={referenceApprovalSummary}
+        loading={detailLoading}
+        actionLoading={patchActionLoading}
+        onDecision={handleReferenceApprovalDecision}
+        onClose={closeDetails}
+      />
+      <VerifiedReferencesPanel
+        open={detailMode === "verifiedReferences"}
+        status={manuscriptReferencesStatus}
+        preview={manuscriptReferencesPreview}
+        loading={detailLoading}
+        actionLoading={patchActionLoading}
+        onRefresh={handleRefreshVerifiedReferences}
+        onClose={closeDetails}
+      />
+      <CitationGroundingPanel
+        open={detailMode === "citationGrounding"}
+        report={citationGrounding}
+        loading={detailLoading}
         onClose={closeDetails}
       />
       <LiteratureHistoryPanel

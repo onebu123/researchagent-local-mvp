@@ -19,6 +19,7 @@ PROJECT_SUBDIRS = [
     "reviews",
     "provenance",
     "audit",
+    "llm",
     "runs",
     "trust",
     "exports",

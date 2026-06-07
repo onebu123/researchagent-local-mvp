@@ -19,8 +19,27 @@ Global Trust Dashboard 汇总的是本地 workflow 产物和人工 review 记录
 
 Release Readiness 只判断 local MVP 演示与导出是否准备好。它不能代表 production-ready、compliance-ready 或 peer-review-ready。
 
+## v1.1 Literature Intelligence 的边界
+
+- `LLM_MODE=mock` 是默认模式；live 仅表示本地配置了 OpenAI-compatible provider，不代表输出已验证。
+- LLM call log 只记录摘要、hash、token/cost 占位、状态和错误类别；不得作为完整 prompt 存档。
+- Literature RAG 只使用本地 parsed literature 文本；不会联网检索、不会真实 OCR、不会强制 PaperQA2。
+- RAG answer 必须绑定真实 `source_passages`；没有本地支持时只能输出 `unsupported_notes`。
+- Metadata lookup 默认 `mock_fixture`；optional provider 结果仍是候选，不会自动变成 verified reference。
+- BibTeX 正式条目只来自 `metadata_status=verified` 且 `human_verified=true` 的记录。
+- Citation Support 是本地文本支持检查，不证明科学真实性、统计显著性、因果关系或同行评审通过。
+
 ## Project Export 的边界
 
 Project Export 是本地项目材料包，不是生产备份。
 
 导出会排除 `.env*`、密钥、缓存、运行时目录、Playwright 结果和明显绝对路径内容。它仍然可能包含用户主动放入项目产物的研究内容，因此导出前应人工复核。
+
+## v1.2 Reference Verification 的边界
+
+- Reference Verification 不连接真实 DOI 数据库；默认只使用 `mock_fixture`。
+- optional providers 只做可选候选来源，未配置或无网络时必须 graceful failure。
+- candidate 不等于 verified reference；系统不得自动把 candidate 写入 `literature_index.json`。
+- `apply_to_literature_index=true` 必须由人工显式触发，且只允许 `decision=approved`。
+- `citation_grounding_report.json` 只表示本地 passage grounding strength，不证明科学事实、统计显著性、因果关系、同行评审通过或生产可用。
+- 正式 References 与正式 BibTeX entry 只来自 `reference_verification_status=approved`、`metadata_status=verified`、`human_verified=true` 的记录。

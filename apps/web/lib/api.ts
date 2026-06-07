@@ -11,6 +11,9 @@ import type {
   AuditExportReport,
   AuditExportSummary,
   AuditLogEntry,
+  BibTeXResponse,
+  CitationGroundingReport,
+  CitationSupportReport,
   ClaimAlignment,
   EvidenceClaim,
   EvidenceClaimReviewStatus,
@@ -19,7 +22,11 @@ import type {
   IssueResolution,
   IssueResolutionReview,
   IssueResolutionReviewRequest,
+  LLMCallLogEntry,
+  LLMStatus,
+  LLMTestResult,
   LiteratureHistoryEntry,
+  LiteratureMetadataLookupResponse,
   LiteratureMetadataBatchReview,
   LiteratureMetadataDiffReport,
   MetadataRevertPreview,
@@ -27,6 +34,9 @@ import type {
   MetadataReviewActionValue,
   MetadataReviewActionsResponse,
   LiteraturePatch,
+  LiteratureRAGAnswer,
+  LiteratureRAGChunk,
+  LiteratureRAGIndex,
   LiteratureRecord,
   ManuscriptDiff,
   ManuscriptDiffPreview,
@@ -35,6 +45,8 @@ import type {
   ManuscriptPatchConfirmResponse,
   ManuscriptPatchItemEditRequest,
   ManuscriptPatchPreview,
+  ManuscriptReferencesPreview,
+  ManuscriptReferencesStatus,
   ManuscriptVersionContent,
   ManuscriptVersionHistory,
   OutputContent,
@@ -47,9 +59,18 @@ import type {
   PDFQualityReport,
   PDFPageTextPreviewResponse,
   PDFPageReviewsResponse,
+  PromptRegistry,
   ProjectExportInfo,
   ProjectDetail,
   ProjectRead,
+  ReferenceApproval,
+  ReferenceApprovalDecision,
+  ReferenceApprovalResponse,
+  ReferenceApprovalSummaryResponse,
+  ReferenceVerificationProvider,
+  ReferenceVerificationResult,
+  ReferenceVerificationRunResponse,
+  ReferenceVerificationSummaryResponse,
   RevisionDecision,
   RevisionDecisionPatch,
   RevisionDiffHumanStatus,
@@ -58,6 +79,7 @@ import type {
   ReviewerClosureSummary,
   RunHistory,
   SentenceIssue,
+  SourcePassageEvidenceReport,
   ReadinessReport,
   TrustSummary,
   AuditVerifyResult,
@@ -88,6 +110,175 @@ export async function listProjects(): Promise<ProjectRead[]> {
 
 export async function getProject(projectId: string): Promise<ProjectDetail> {
   return request<ProjectDetail>(`/api/projects/${projectId}`);
+}
+
+export async function getLLMStatus(): Promise<LLMStatus> {
+  return request<LLMStatus>("/api/system/llm/status");
+}
+
+export async function testLLM(prompt: string, promptVersion = "literature_answer_v1"): Promise<LLMTestResult> {
+  return request<LLMTestResult>("/api/system/llm/test", {
+    method: "POST",
+    body: JSON.stringify({ prompt, prompt_version: promptVersion })
+  });
+}
+
+export async function getPromptRegistry(): Promise<PromptRegistry> {
+  return request<PromptRegistry>("/api/system/prompts");
+}
+
+export async function getLLMCalls(projectId: string): Promise<LLMCallLogEntry[]> {
+  return request<LLMCallLogEntry[]>(`/api/projects/${projectId}/llm/calls`);
+}
+
+export async function buildLiteratureRAG(projectId: string): Promise<LiteratureRAGIndex> {
+  return request<LiteratureRAGIndex>(`/api/projects/${projectId}/literature/rag/build`, {
+    method: "POST"
+  });
+}
+
+export async function askLiteratureRAG(
+  projectId: string,
+  question: string,
+  topK = 5
+): Promise<LiteratureRAGAnswer> {
+  return request<LiteratureRAGAnswer>(`/api/projects/${projectId}/literature/rag/ask`, {
+    method: "POST",
+    body: JSON.stringify({ question, top_k: topK })
+  });
+}
+
+export async function getLiteratureRAGChunks(projectId: string): Promise<LiteratureRAGChunk[]> {
+  return request<LiteratureRAGChunk[]>(`/api/projects/${projectId}/literature/rag/chunks`);
+}
+
+export async function getLiteratureRAGAnswers(projectId: string): Promise<LiteratureRAGAnswer[]> {
+  return request<LiteratureRAGAnswer[]>(`/api/projects/${projectId}/literature/rag/answers`);
+}
+
+export async function getSourcePassageEvidence(projectId: string): Promise<SourcePassageEvidenceReport> {
+  return request<SourcePassageEvidenceReport>(
+    `/api/projects/${projectId}/provenance/source-passage-evidence`
+  );
+}
+
+export async function runMetadataLookup(
+  projectId: string,
+  provider = "mock_fixture"
+): Promise<LiteratureMetadataLookupResponse> {
+  return request<LiteratureMetadataLookupResponse>(
+    `/api/projects/${projectId}/literature/metadata-lookup`,
+    {
+      method: "POST",
+      body: JSON.stringify({ provider })
+    }
+  );
+}
+
+export async function getMetadataLookupResults(
+  projectId: string
+): Promise<LiteratureMetadataLookupResponse> {
+  return request<LiteratureMetadataLookupResponse>(
+    `/api/projects/${projectId}/literature/metadata-lookup/results`
+  );
+}
+
+export async function generateBibTeX(projectId: string): Promise<BibTeXResponse> {
+  return request<BibTeXResponse>(`/api/projects/${projectId}/literature/bibtex/generate`, {
+    method: "POST"
+  });
+}
+
+export async function getBibTeX(projectId: string): Promise<BibTeXResponse> {
+  return request<BibTeXResponse>(`/api/projects/${projectId}/literature/bibtex`);
+}
+
+export async function getCitationSupport(projectId: string): Promise<CitationSupportReport> {
+  return request<CitationSupportReport>(`/api/projects/${projectId}/provenance/citation-support`);
+}
+
+export async function runReferenceVerification(
+  projectId: string,
+  provider: ReferenceVerificationProvider = "mock_fixture",
+  literatureId?: string
+): Promise<ReferenceVerificationRunResponse> {
+  return request<ReferenceVerificationRunResponse>(
+    `/api/projects/${projectId}/literature/reference-verification/run`,
+    {
+      method: "POST",
+      body: JSON.stringify({ provider, literature_id: literatureId })
+    }
+  );
+}
+
+export async function getReferenceVerificationResults(
+  projectId: string
+): Promise<ReferenceVerificationResult[]> {
+  return request<ReferenceVerificationResult[]>(
+    `/api/projects/${projectId}/literature/reference-verification/results`
+  );
+}
+
+export async function getReferenceVerificationSummary(
+  projectId: string
+): Promise<ReferenceVerificationSummaryResponse> {
+  return request<ReferenceVerificationSummaryResponse>(
+    `/api/projects/${projectId}/literature/reference-verification/summary`
+  );
+}
+
+export async function approveReferenceVerification(
+  projectId: string,
+  verificationId: string,
+  decision: ReferenceApprovalDecision,
+  reason?: string,
+  applyToLiteratureIndex = false
+): Promise<ReferenceApprovalResponse> {
+  return request<ReferenceApprovalResponse>(
+    `/api/projects/${projectId}/literature/reference-verification/${verificationId}/approval`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        decision,
+        reason,
+        apply_to_literature_index: applyToLiteratureIndex
+      })
+    }
+  );
+}
+
+export async function getReferenceApprovals(projectId: string): Promise<ReferenceApproval[]> {
+  return request<ReferenceApproval[]>(`/api/projects/${projectId}/literature/reference-approvals`);
+}
+
+export async function getReferenceApprovalSummary(
+  projectId: string
+): Promise<ReferenceApprovalSummaryResponse> {
+  return request<ReferenceApprovalSummaryResponse>(
+    `/api/projects/${projectId}/literature/reference-approval-summary`
+  );
+}
+
+export async function getCitationGrounding(projectId: string): Promise<CitationGroundingReport> {
+  return request<CitationGroundingReport>(
+    `/api/projects/${projectId}/provenance/citation-grounding`
+  );
+}
+
+export async function getManuscriptReferencesStatus(
+  projectId: string
+): Promise<ManuscriptReferencesStatus> {
+  return request<ManuscriptReferencesStatus>(
+    `/api/projects/${projectId}/manuscript/references/status`
+  );
+}
+
+export async function getManuscriptReferencesPreview(
+  projectId: string
+): Promise<ManuscriptReferencesPreview> {
+  return request<ManuscriptReferencesPreview>(
+    `/api/projects/${projectId}/manuscript/references/preview`
+  );
 }
 
 export async function runWorkflow(projectId: string): Promise<WorkflowRunResponse> {
@@ -1811,6 +2002,412 @@ export const mockPDFPageTextPreview: PDFPageTextPreviewResponse = {
   ],
   notes: ["Preview uses existing parsed text and metadata only. No OCR was attempted."]
 };
+
+export const mockLLMStatus: LLMStatus = {
+  mode: "mock",
+  effective_mode: "mock",
+  provider: "openai-compatible",
+  model: "gpt-4o-mini",
+  base_url_host: "api.openai.com",
+  api_key_configured: false,
+  timeout_seconds: 20,
+  max_retries: 1
+};
+
+export const mockLLMTestResult: LLMTestResult = {
+  ok: true,
+  content: { ok: true, message: "mock LLM test response" },
+  raw_content: "{\"ok\":true}",
+  mode: "mock",
+  provider: "openai-compatible",
+  model: "gpt-4o-mini",
+  prompt_version: "literature_answer_v1",
+  status: "fallback",
+  usage: {},
+  error: null
+};
+
+export const mockPromptRegistry: PromptRegistry = {
+  count: 4,
+  required_prompt_versions: [
+    "literature_answer_v1",
+    "citation_support_v1",
+    "metadata_extraction_v1",
+    "bibtex_generation_v1"
+  ],
+  prompts: [
+    {
+      prompt_version: "literature_answer_v1",
+      file_name: "literature_answer_v1.md",
+      purpose: "Answer with local source passages only.",
+      content_sha256: "mock_prompt_hash_1",
+      char_count: 320
+    },
+    {
+      prompt_version: "citation_support_v1",
+      file_name: "citation_support_v1.md",
+      purpose: "Check citation support status.",
+      content_sha256: "mock_prompt_hash_2",
+      char_count: 280
+    },
+    {
+      prompt_version: "metadata_extraction_v1",
+      file_name: "metadata_extraction_v1.md",
+      purpose: "Draft metadata candidates.",
+      content_sha256: "mock_prompt_hash_3",
+      char_count: 260
+    },
+    {
+      prompt_version: "bibtex_generation_v1",
+      file_name: "bibtex_generation_v1.md",
+      purpose: "Generate verified-only BibTeX drafts.",
+      content_sha256: "mock_prompt_hash_4",
+      char_count: 260
+    }
+  ]
+};
+
+export const mockLiteratureRAGChunks: LiteratureRAGChunk[] = [
+  {
+    chunk_id: "chunk_lit_001_0001",
+    literature_id: "lit_001",
+    source_file: "literature/demo_literature.md",
+    parsed_text_file: "literature/demo_literature.md",
+    title: "Demo literature placeholder",
+    source_type: "markdown",
+    metadata_status: "placeholder",
+    human_verified: false,
+    start_char: 0,
+    end_char: 420,
+    text:
+      "This placeholder literature mentions process temperature, precursor concentration, efficiency, stability, and band gap.",
+    token_count: 8,
+    tokens: ["process", "temperature", "efficiency", "stability"],
+    chunk_hash: "mock_chunk_hash"
+  }
+];
+
+export const mockLiteratureRAGAnswers: LiteratureRAGAnswer[] = [
+  {
+    answer_id: "rag_answer_0001",
+    created_at: new Date().toISOString(),
+    project_id: "demo_project",
+    question: "What does the demo literature mention about efficiency?",
+    answer:
+      "The local placeholder passage mentions efficiency together with process temperature, precursor concentration, stability, and band gap.",
+    source_passages: mockLiteratureRAGChunks,
+    unsupported_notes: [],
+    limitations: ["Mock fallback; human review is required before citation."],
+    retrieval: { mode: "local_keyword", top_k: 5, returned: 1 },
+    llm: {
+      mode: "mock",
+      provider: "openai-compatible",
+      model: "gpt-4o-mini",
+      prompt_version: "literature_answer_v1",
+      status: "fallback"
+    }
+  }
+];
+
+export const mockLiteratureRAGIndex: LiteratureRAGIndex = {
+  project_id: "demo_project",
+  created_at: new Date().toISOString(),
+  relative_path: "literature/rag/rag_index.json",
+  chunks_file: "literature/rag/chunks.jsonl",
+  retrieval_mode: "local_keyword",
+  optional_paperqa2_enabled: false,
+  prompt_version: "literature_answer_v1",
+  chunk_count: mockLiteratureRAGChunks.length,
+  literature_count: 1,
+  notes: ["Mock local keyword RAG index."]
+};
+
+export const mockSourcePassageEvidence: SourcePassageEvidenceReport = {
+  generated_at: new Date().toISOString(),
+  relative_path: "provenance/source_passage_evidence.json",
+  source_chunks_file: "literature/rag/chunks.jsonl",
+  source_answers_file: "literature/rag/rag_answers.jsonl",
+  records: [
+    {
+      evidence_id: "source_passage_0001",
+      answer_id: "rag_answer_0001",
+      question: "What does the demo literature mention about efficiency?",
+      chunk_id: "chunk_lit_001_0001",
+      literature_id: "lit_001",
+      source_file: "literature/demo_literature.md",
+      title: "Demo literature placeholder",
+      metadata_status: "placeholder",
+      human_verified: false,
+      support_status: "needs_human_review",
+      excerpt: mockLiteratureRAGChunks[0].text,
+      notes: ["Placeholder metadata requires human review."]
+    }
+  ],
+  summary: { records: 1, supported: 0, partial: 0, needs_human_review: 1 }
+};
+
+export const mockMetadataLookupResults: LiteratureMetadataLookupResponse = {
+  results: [
+    {
+      lookup_id: "metadata_lookup_0001",
+      created_at: new Date().toISOString(),
+      provider: "mock_fixture",
+      literature_id: "lit_001",
+      source_file: "literature/demo_literature.md",
+      query_title: "Demo literature placeholder",
+      candidates: [{ title: "Demo literature placeholder", source: "existing_local_metadata" }],
+      status: "needs_human_review",
+      human_verification_required: true,
+      literature_index_modified: false,
+      warnings: ["No DOI candidate was supplied by the mock provider."],
+      prompt_version: "metadata_extraction_v1"
+    }
+  ],
+  summary: {
+    provider: "mock_fixture",
+    literature_index_modified: false,
+    records: 1,
+    needs_human_review: 1
+  }
+};
+
+export const mockBibTeX: BibTeXResponse = {
+  bibtex:
+    "% ResearchAgent v1.2 BibTeX draft.\n% Formal entries require metadata_status=verified, human_verified=true, and reference_verification_status=approved.\n% Skipped lit_001: Demo literature placeholder; reference candidate has not been approved and applied. Source: literature/demo_literature.md\n",
+  report: {
+    generated_at: new Date().toISOString(),
+    relative_path: "literature/bibtex_report.json",
+    bibtex_file: "literature/references.bib",
+    prompt_version: "bibtex_generation_v1",
+    formal_entries: 0,
+    approved_entries: 0,
+    candidate_records: 1,
+    rejected_records: 0,
+    placeholder_records: 0,
+    skipped_records: 1,
+    written: [],
+    skipped: [
+      {
+        literature_id: "lit_001",
+        title: "Demo literature placeholder",
+        metadata_status: "placeholder",
+        human_verified: false,
+        reference_verification_status: null,
+        reason: "reference candidate has not been approved and applied"
+      }
+    ],
+    candidates: [
+      {
+        literature_id: "lit_001",
+        title: "Demo literature placeholder",
+        reason: "reference candidate has not been approved and applied"
+      }
+    ],
+    rejected: [],
+    placeholders: [],
+    warnings: [
+      "Formal BibTeX entries are generated only from approved human-verified verified metadata.",
+      "Missing fields are not fabricated."
+    ]
+  }
+};
+
+export const mockCitationSupport: CitationSupportReport = {
+  generated_at: new Date().toISOString(),
+  relative_path: "provenance/citation_support_report.json",
+  prompt_version: "citation_support_v1",
+  source_chunks_file: "literature/rag/chunks.jsonl",
+  source_passage_evidence_file: "provenance/source_passage_evidence.json",
+  records: [
+    {
+      claim_id: "claim_001",
+      claim: "The dataset contains descriptive statistics.",
+      status: "unsupported",
+      matched_chunk_ids: [],
+      overlap_terms: 0,
+      source_passage_evidence_ids: [],
+      notes: ["Local source passages do not prove this claim."]
+    }
+  ],
+  summary: { claims_checked: 1, supported: 0, partial: 0, unsupported: 1, needs_human_review: 0 },
+  limitations: ["This report does not verify scientific truth."]
+};
+
+export const mockReferenceVerificationResults: ReferenceVerificationResult[] = [
+  {
+    verification_id: "ref_verify_0001",
+    literature_id: "lit_001",
+    provider: "mock_fixture",
+    query: {
+      title: "Demo literature placeholder",
+      authors: [],
+      year: null,
+      doi: null,
+      journal: null
+    },
+    candidate: {
+      title: "Demo literature placeholder",
+      authors: [],
+      year: null,
+      doi: null,
+      journal: null,
+      url: null
+    },
+    match_scores: {
+      title_match_score: 1,
+      author_match_score: 0,
+      year_match: "missing",
+      doi_match: "missing",
+      journal_match_score: 0,
+      overall_confidence: 0.35
+    },
+    status: "needs_human_review",
+    verification_status: "needs_human_review",
+    requires_human_approval: true,
+    applied_to_literature_index: false,
+    warnings: ["No DOI candidate was supplied; DOI was not fabricated."],
+    error: null,
+    created_at: new Date().toISOString()
+  }
+];
+
+export const mockReferenceVerificationSummary: ReferenceVerificationSummaryResponse = {
+  generated_at: new Date().toISOString(),
+  total: 1,
+  total_records: 1,
+  summary: {
+    total: 1,
+    total_records: 1,
+    verified_candidate: 0,
+    ambiguous_match: 0,
+    no_match: 0,
+    provider_failed: 0,
+    needs_human_review: 1,
+    approved: 0,
+    rejected: 0
+  },
+  providers: {
+    mock_fixture: 1,
+    crossref_optional: 0,
+    semantic_scholar_optional: 0,
+    pubmed_optional: 0
+  }
+};
+
+export const mockReferenceApprovals: ReferenceApproval[] = [
+  {
+    approval_id: "ref_approval_0001",
+    verification_id: "ref_verify_0001",
+    literature_id: "lit_001",
+    decision: "needs_manual_check",
+    reason: "Mock candidate requires human review before apply.",
+    approved_metadata: {},
+    created_at: new Date().toISOString(),
+    source: "mock",
+    apply_to_literature_index: false,
+    applied_to_literature_index: false
+  }
+];
+
+export const mockReferenceApprovalSummary: ReferenceApprovalSummaryResponse = {
+  generated_at: new Date().toISOString(),
+  relative_path: "literature/reference_approval_summary.json",
+  summary: {
+    total_records: 1,
+    approved: 0,
+    rejected: 0,
+    needs_manual_check: 1,
+    applied_to_literature_index: 0
+  },
+  latest_by_literature: {
+    lit_001: mockReferenceApprovals[0]
+  }
+};
+
+export const mockCitationGrounding: CitationGroundingReport = {
+  generated_at: new Date().toISOString(),
+  relative_path: "provenance/citation_grounding_report.json",
+  items: [
+    {
+      grounding_id: "grounding_0001",
+      claim_id: "claim_001",
+      claim: "The dataset contains descriptive statistics.",
+      candidate_chunk_id: "chunk_lit_001_0001",
+      literature_id: "lit_001",
+      source_file: "literature/demo_literature.md",
+      text_excerpt: "Demo literature placeholder for local citation grounding.",
+      grounding_strength: "needs_human_review",
+      signals: {
+        keyword_overlap: 0.2,
+        entity_overlap: 0,
+        number_consistency: "not_applicable",
+        metadata_verified: false,
+        pdf_quality_ok: true,
+        llm_assisted: false
+      },
+      limitations: ["Grounding strength is a heuristic and requires human review."],
+      requires_human_review: true
+    }
+  ],
+  summary: { total: 1, strong: 0, moderate: 0, weak: 0, unsupported: 0, needs_human_review: 1 }
+};
+
+export const mockManuscriptReferencesStatus: ManuscriptReferencesStatus = {
+  generated_at: new Date().toISOString(),
+  relative_path: "manuscript/references_status.json",
+  preview_file: "manuscript/references_section_preview.md",
+  verified_references: [],
+  candidate_references: [
+    {
+      literature_id: "lit_001",
+      title: "Demo literature placeholder",
+      authors: [],
+      year: null,
+      doi: null,
+      journal: null,
+      source_file: "literature/demo_literature.md",
+      metadata_status: "placeholder",
+      reference_verification_status: null,
+      reference_verification_id: null,
+      human_verified: false,
+      warning: "Candidate reference is not approved and cannot enter formal References.",
+      verification_results: mockReferenceVerificationResults
+    }
+  ],
+  placeholder_records: [],
+  warnings: ["Candidate references require approval before formal use."]
+};
+
+export const mockManuscriptReferencesPreview: ManuscriptReferencesPreview = {
+  relative_path: "manuscript/references_section_preview.md",
+  content:
+    "# References Preview\n\nNo formal References entries are available. Approve and apply references first.\n"
+};
+
+export const mockLLMCalls: LLMCallLogEntry[] = [
+  {
+    call_id: "llm_call_0001",
+    created_at: new Date().toISOString(),
+    project_id: "demo_project",
+    operation: "literature_rag.ask",
+    provider: "openai-compatible",
+    model: "gpt-4o-mini",
+    mode: "mock",
+    prompt_version: "literature_answer_v1",
+    status: "fallback",
+    request_summary: { message_count: 2, char_count: 520, sha256: "mock_request_hash" },
+    response_summary: { char_count: 160, sha256: "mock_response_hash", preview: "Mock RAG answer." },
+    usage: {
+      prompt_tokens: null,
+      completion_tokens: null,
+      total_tokens: null,
+      estimated_cost_usd: null
+    },
+    error: null,
+    attempts: 0,
+    metadata: { answer_id: "rag_answer_0001", source_chunk_ids: ["chunk_lit_001_0001"] }
+  }
+];
 
 export const mockAnalysisComparisons: AnalysisComparison[] = [
   {

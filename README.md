@@ -134,11 +134,74 @@ v1.0 Local MVP 不包含：
 
 详见 [local_mvp_limitations.md](docs/local_mvp_limitations.md)。
 
+## ResearchAgent v1.1 Literature Intelligence
+
+v1.1 在 v1.0 Local MVP 上增加本地文献智能能力：OpenAI-compatible LLM client、LLM call log、Prompt Registry、Literature RAG、Source Passage Evidence、Metadata Lookup、BibTeX draft 和 Citation Support。默认 `LLM_MODE=mock`，没有 API key 也可以运行 demo 和验证。
+
+LLM 配置：
+
+```bash
+LLM_MODE=mock
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_API_KEY=
+LLM_MODEL=gpt-4o-mini
+LLM_PROVIDER=openai-compatible
+LLM_TIMEOUT_SECONDS=20
+LLM_MAX_RETRIES=1
+```
+
+v1.1 API：
+
+- `GET /api/system/llm/status`
+- `POST /api/system/llm/test`
+- `GET /api/system/prompts`
+- `GET /api/projects/{project_id}/llm/calls`
+- `POST /api/projects/{project_id}/literature/rag/build`
+- `POST /api/projects/{project_id}/literature/rag/ask`
+- `GET /api/projects/{project_id}/literature/rag/chunks`
+- `GET /api/projects/{project_id}/literature/rag/answers`
+- `GET /api/projects/{project_id}/provenance/source-passage-evidence`
+- `POST /api/projects/{project_id}/literature/metadata-lookup`
+- `GET /api/projects/{project_id}/literature/metadata-lookup/results`
+- `POST /api/projects/{project_id}/literature/bibtex/generate`
+- `GET /api/projects/{project_id}/literature/bibtex`
+- `GET /api/projects/{project_id}/provenance/citation-support`
+
+v1.1 验证：
+
+```bash
+python scripts/validate_v11.py
+```
+
+v1.1 不伪造 DOI、作者、年份、期刊、页码、p 值、统计显著性、因果关系或真实实验结论；RAG 只使用本地 parsed literature 文本；BibTeX 正式条目只来自 `metadata_status=verified` 且 `human_verified=true` 的记录。
+
 ## 文档
 
 - [用户指南](docs/user_guide.md)
 - [Demo 演示流程](docs/demo_walkthrough.md)
 - [Local MVP 限制](docs/local_mvp_limitations.md)
+- [v1.1 验收标准](docs/v1.1_acceptance_criteria.md)
+- [v1.1 验收报告](docs/v1.1_acceptance_report.md)
 - [GitHub 发布检查清单](docs/github_release_checklist.md)
 - [v1.0 验收报告](docs/v1.0_acceptance_report.md)
 - [GitHub 上传状态](docs/github_upload_status.md)
+
+## ResearchAgent v1.2 Reference Verification
+
+v1.2 在 v1.1 Literature Intelligence 基础上新增 Reference Verification、Reference Approval、Citation Grounding 和 Verified References 预览。默认 provider 是 `mock_fixture`，不需要 API key 或外部网络；`crossref_optional`、`semantic_scholar_optional`、`pubmed_optional` 在本地 MVP 中只会 graceful failure，不会让 workflow 崩溃。
+
+关键规则：
+- Reference Verification 只生成 candidate 和 `match_scores`，不会自动修改 `literature/literature_index.json`。
+- Approval Workflow 默认 `apply_to_literature_index=false`，只写 `literature/reference_approvals.jsonl`。
+- 只有人工 `decision=approved` 且显式 `apply_to_literature_index=true`，才允许写回 `literature_index.json`，并写入 `literature/metadata_history.jsonl` 与 `audit/audit_log.jsonl`。
+- 正式 References 与正式 BibTeX entry 只允许来自 `metadata_status=verified`、`human_verified=true`、`reference_verification_status=approved` 的记录。
+- `provenance/citation_grounding_report.json` 只表示本地 passage grounding strength，不证明科学事实、统计显著性、因果关系或 peer-review readiness。
+
+v1.2 常用命令：
+```bash
+python scripts/run_demo.py
+python scripts/validate_v12.py
+```
+
+- [v1.2 验收标准](docs/v1.2_acceptance_criteria.md)
+- [v1.2 验收报告](docs/v1.2_acceptance_report.md)

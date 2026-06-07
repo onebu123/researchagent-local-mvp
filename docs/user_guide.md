@@ -34,6 +34,26 @@
 - 后端 SQLite：`projects/research_agent.sqlite3`
 - 前端测试报告：`apps/web/playwright-report`，默认被 `.gitignore` 忽略
 
+## v1.1 Literature Intelligence
+
+右侧工具区新增 `Literature Intelligence` 分组：
+
+- `LLM Settings`：查看 mock/live 状态、模型、provider、timeout/retry 和 Prompt Registry；不会显示 API key。
+- `Prompt Registry`：同入口展示版本化 prompt 文件。
+- `Literature RAG`：构建本地 keyword RAG index，并基于真实 chunk 生成带 `source_passages` 的回答草稿。
+- `Source Passage Evidence`：查看 RAG answer 与 `chunk_id` 的来源绑定。
+- `Metadata Lookup`：默认 `mock_fixture`，只生成候选与 warning，不修改 `literature_index.json`。
+- `BibTeX`：只为 verified + human_verified 文献生成正式 BibTeX；placeholder 只写注释。
+- `Citation Support`：用本地 source passage 检查 claim 支持状态，不证明科学事实。
+- `LLM Call Log`：查看项目级 LLM 调用摘要、hash、token/cost 占位和状态。
+
+v1.1 demo：
+
+```bash
+python scripts/run_demo.py
+python scripts/validate_v11.py
+```
+
 ## 常用命令
 
 ```bash
@@ -42,4 +62,23 @@ python scripts/seed_demo.py
 python scripts/run_demo.py
 python scripts/export_project_zip.py --project-id demo_project
 python scripts/validate_v1.py
+python scripts/validate_v11.py
+```
+
+## v1.2 Reference Verification
+
+v1.2 新增一组右侧抽屉入口：
+- `Run Reference Verification`：使用 `mock_fixture` 生成本地 reference candidate 和 match score，不修改 `literature_index.json`。
+- `Verification Results`：查看 `reference_verification_results.jsonl` 与 summary。
+- `Approval Workflow`：记录 approved、rejected 或 needs_manual_check；默认不应用到索引。
+- `Verified References`：查看 `manuscript/references_status.json` 与 `manuscript/references_section_preview.md`，不会覆盖 `manuscript/draft.md`。
+- `Citation Grounding`：查看 `provenance/citation_grounding_report.json`，用于本地 passage grounding。
+- `BibTeX Status`：查看 approved-only BibTeX 状态。
+
+只有在 `Approval Workflow` 中明确选择 apply，并发送 `apply_to_literature_index=true`，系统才会把 approved candidate 写回 `literature_index.json`，同时记录 metadata history 和 audit log。正式 References 与正式 BibTeX entry 只来自 `reference_verification_status=approved`、`metadata_status=verified`、`human_verified=true` 的记录。
+
+v1.2 验证命令：
+```bash
+python scripts/run_demo.py
+python scripts/validate_v12.py
 ```

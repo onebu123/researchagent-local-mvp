@@ -23,6 +23,8 @@ EDITABLE_FIELDS = {
     "journal",
     "metadata_status",
     "human_verified",
+    "reference_verification_status",
+    "reference_verification_id",
 }
 
 

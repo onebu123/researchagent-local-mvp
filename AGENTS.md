@@ -182,6 +182,18 @@ npx playwright test
 - 前端 v0.8 面板必须保留 mock fallback；真实后端不可用时 dashboard 仍需可渲染。
 - 不得伪造统计显著性、p 值、因果结论、真实实验结论、DOI 或 verified reference。
 - v0.8 不引入登录、多租户、PostgreSQL、Redis、Celery、LangGraph、公网部署、真实 DOI 核验、真实 OCR、真实科研软件、真实科研仪器或真实查重。
+## ResearchAgent v1.1 开发边界
+
+- `python scripts/validate_v11.py` 必须调用并保持 `python scripts/validate_v1.py` 通过；无 API key、无网络要求时也必须可运行。
+- LLM client 默认 `LLM_MODE=mock`；live 只允许 OpenAI-compatible 调用，失败必须 fallback，不得泄露 API key、Authorization header、完整敏感 prompt 或本机绝对路径。
+- Prompt 必须版本化存放于 `services/api/app/prompts/`；RAG、citation support、metadata lookup、BibTeX 产物必须记录 `prompt_version`。
+- Literature RAG 只能使用本地 parsed literature 文本；回答必须绑定真实 `chunk_id` 和 `source_passages`，否则写 `unsupported_notes`。
+- Metadata lookup 默认 `mock_fixture`，不得自动联网或回写 `literature/literature_index.json`；optional provider 结果仍需人工验证。
+- BibTeX 正式条目只允许来自 `metadata_status=verified` 且 `human_verified=true` 的文献；不得伪造 DOI、作者、年份、期刊或页码。
+- Citation support 只能给 `supported`、`partial`、`unsupported`、`needs_human_review` 状态；placeholder 文献不得升级为已验证支持。
+- 前端必须保留 dashboard + drawer/panel 模式和 mock fallback，不把 UI 当安全边界。
+- v1.1 不引入登录、多租户、PostgreSQL、Redis、Celery、LangGraph、强制 PaperQA2、真实 OCR、生产部署或 peer-review-ready 声明。
+
 ## ResearchAgent v0.10 开发边界
 
 - `python scripts/validate_v01.py` 到 `python scripts/validate_v10.py` 必须持续通过。
@@ -194,3 +206,13 @@ npx playwright test
 - Failure fixture 必须幂等，不得重复追加 `run_failure_fixture_001`。
 - v0.10 前端必须保留 dashboard + drawer/panel 模式和 mock fallback。
 - v0.10 不引入登录、多租户、PostgreSQL、Redis、Celery、LangGraph、公网部署、真实 DOI 验证、真实 OCR、真实科研软件/仪器或查重。
+
+## ResearchAgent v1.2 开发边界
+- `python scripts/validate_v12.py` 必须保持可运行，并通过 v1.1 validation 保护既有能力。
+- Reference Verification 只生成候选、`match_scores`、summary 和 audit；不得自动修改 `literature/literature_index.json`，不得自动写 DOI、作者、年份、期刊、页码或 verified 状态。
+- Approval Workflow 默认 `apply_to_literature_index=false`，只能记录人工 decision；只有 `decision=approved` 且显式 `apply_to_literature_index=true` 时，才允许写回索引并记录 `literature/metadata_history.jsonl` 与 `audit/audit_log.jsonl`。
+- 正式 manuscript References 与正式 BibTeX entry 只允许来自 `metadata_status=verified`、`human_verified=true`、`reference_verification_status=approved` 的记录。
+- rejected、needs_manual_check、candidate、placeholder 文献不得进入正式 References 或正式 BibTeX entry。
+- Citation Grounding 只能基于本地 RAG/source passages 输出 `provenance/citation_grounding_report.json`；`strong` 也不是科学事实证明、统计显著性证明、因果证明或 peer-review-ready 声明。
+- optional reference providers 在无网络或未配置时必须 graceful failure，不得成为 demo、test 或 validation 的硬依赖。
+- 前端必须保留 mock fallback；`ReferenceVerificationPanel`、`ReferenceApprovalPanel`、`CitationGroundingPanel`、`VerifiedReferencesPanel` 不得把 candidate 显示成 verified。

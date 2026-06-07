@@ -627,6 +627,8 @@ export type LiteratureRecord = {
   quality_score?: number | null;
   quality_label?: string | null;
   needs_manual_review?: boolean | null;
+  reference_verification_status?: "approved" | "rejected" | "needs_manual_check" | string | null;
+  reference_verification_id?: string | null;
 };
 
 export type PDFPageQuality = {
@@ -1223,6 +1225,327 @@ export type AuditFilteredExport = AuditFilteredExportSummary & {
 
 export type AuditFilteredExportReport = {
   export_id: string;
+  relative_path: string;
+  content: string;
+};
+
+export type LLMStatus = {
+  mode: string;
+  effective_mode: string;
+  provider: string;
+  model: string;
+  base_url_host: string;
+  api_key_configured: boolean;
+  timeout_seconds: number;
+  max_retries: number;
+};
+
+export type LLMTestResult = {
+  ok: boolean;
+  content: unknown;
+  raw_content: string;
+  mode: string;
+  provider: string;
+  model: string;
+  prompt_version: string;
+  status: string;
+  usage: Record<string, unknown>;
+  error: string | null;
+};
+
+export type PromptRegistryItem = {
+  prompt_version: string;
+  file_name: string;
+  purpose: string;
+  content_sha256: string;
+  char_count: number;
+};
+
+export type PromptRegistry = {
+  prompts: PromptRegistryItem[];
+  count: number;
+  required_prompt_versions: string[];
+};
+
+export type LLMCallLogEntry = {
+  call_id: string;
+  created_at: string;
+  project_id: string;
+  operation: string;
+  provider: string;
+  model: string;
+  mode: string;
+  prompt_version: string;
+  status: string;
+  request_summary: Record<string, unknown>;
+  response_summary: Record<string, unknown>;
+  usage: Record<string, unknown>;
+  error: string | null;
+  attempts: number;
+  metadata: Record<string, unknown>;
+};
+
+export type RAGSourcePassage = {
+  chunk_id: string;
+  literature_id: string;
+  source_file: string | null;
+  title: string | null;
+  metadata_status: string | null;
+  human_verified: boolean;
+  score?: number;
+  text: string;
+};
+
+export type LiteratureRAGIndex = {
+  project_id: string;
+  created_at: string;
+  relative_path: string;
+  chunks_file: string;
+  retrieval_mode: string;
+  optional_paperqa2_enabled: boolean;
+  prompt_version: string;
+  chunk_count: number;
+  literature_count: number;
+  notes: string[];
+};
+
+export type LiteratureRAGChunk = RAGSourcePassage & {
+  parsed_text_file: string | null;
+  source_type: string | null;
+  start_char: number;
+  end_char: number;
+  token_count: number;
+  tokens: string[];
+  chunk_hash: string;
+};
+
+export type LiteratureRAGAnswer = {
+  answer_id: string;
+  created_at: string;
+  project_id: string;
+  question: string;
+  answer: string;
+  source_passages: RAGSourcePassage[];
+  unsupported_notes: string[];
+  limitations: string[];
+  retrieval: Record<string, unknown>;
+  llm: {
+    mode: string;
+    provider: string;
+    model: string;
+    prompt_version: string;
+    status: string;
+  };
+};
+
+export type SourcePassageEvidenceRecord = {
+  evidence_id: string;
+  answer_id: string;
+  question: string | null;
+  chunk_id: string;
+  literature_id: string | null;
+  source_file: string | null;
+  title: string | null;
+  metadata_status: string;
+  human_verified: boolean;
+  support_status: "supported" | "partial" | "needs_human_review" | string;
+  excerpt: string;
+  notes: string[];
+};
+
+export type SourcePassageEvidenceReport = {
+  generated_at: string;
+  relative_path: string;
+  source_chunks_file: string;
+  source_answers_file: string;
+  records: SourcePassageEvidenceRecord[];
+  summary: Record<string, number>;
+};
+
+export type LiteratureMetadataLookupRecord = {
+  lookup_id: string;
+  created_at: string;
+  provider: string;
+  literature_id: string;
+  source_file: string | null;
+  query_title: string | null;
+  candidates: Array<Record<string, unknown>>;
+  status: string;
+  human_verification_required: boolean;
+  literature_index_modified: boolean;
+  warnings: string[];
+  prompt_version: string;
+};
+
+export type LiteratureMetadataLookupResponse = {
+  results: LiteratureMetadataLookupRecord[];
+  summary: Record<string, unknown>;
+};
+
+export type BibTeXResponse = {
+  bibtex: string;
+  report: {
+    generated_at: string;
+    relative_path: string;
+    bibtex_file: string;
+    prompt_version: string;
+    formal_entries: number;
+    approved_entries?: number;
+    candidate_records?: number;
+    rejected_records?: number;
+    placeholder_records?: number;
+    skipped_records: number;
+    written: Array<Record<string, unknown>>;
+    skipped: Array<Record<string, unknown>>;
+    candidates?: Array<Record<string, unknown>>;
+    rejected?: Array<Record<string, unknown>>;
+    placeholders?: Array<Record<string, unknown>>;
+    warnings: string[];
+  };
+};
+
+export type CitationSupportRecord = {
+  claim_id: string;
+  claim: string;
+  status: "supported" | "partial" | "unsupported" | "needs_human_review" | string;
+  matched_chunk_ids: string[];
+  overlap_terms: number;
+  source_passage_evidence_ids: string[];
+  notes: string[];
+};
+
+export type CitationSupportReport = {
+  generated_at: string;
+  relative_path: string;
+  prompt_version: string;
+  source_chunks_file: string;
+  source_passage_evidence_file: string;
+  records: CitationSupportRecord[];
+  summary: Record<string, number>;
+  limitations: string[];
+};
+
+export type ReferenceVerificationProvider =
+  | "mock_fixture"
+  | "crossref_optional"
+  | "semantic_scholar_optional"
+  | "pubmed_optional";
+
+export type ReferenceMatchScores = {
+  title_match_score: number;
+  author_match_score: number;
+  year_match: "match" | "mismatch" | "missing" | string;
+  doi_match: "match" | "mismatch" | "missing" | string;
+  journal_match_score: number;
+  overall_confidence: number;
+};
+
+export type ReferenceVerificationResult = {
+  verification_id: string;
+  literature_id: string;
+  provider: ReferenceVerificationProvider | string;
+  query: Record<string, unknown>;
+  candidate: Record<string, unknown>;
+  match_scores: ReferenceMatchScores;
+  status: string;
+  verification_status: string;
+  requires_human_approval: boolean;
+  applied_to_literature_index: boolean;
+  warnings: string[];
+  error: string | null;
+  created_at: string;
+};
+
+export type ReferenceVerificationSummaryResponse = {
+  generated_at: string;
+  total: number;
+  total_records: number;
+  summary: Record<string, number>;
+  providers: Record<string, number>;
+};
+
+export type ReferenceVerificationRunResponse = {
+  results: ReferenceVerificationResult[];
+  summary: ReferenceVerificationSummaryResponse;
+  literature_index_modified: boolean;
+};
+
+export type ReferenceApprovalDecision = "approved" | "rejected" | "needs_manual_check";
+
+export type ReferenceApproval = {
+  approval_id: string;
+  verification_id: string;
+  literature_id: string;
+  decision: ReferenceApprovalDecision | string;
+  reason: string;
+  approved_metadata: Record<string, unknown>;
+  created_at: string;
+  source: string;
+  apply_to_literature_index: boolean;
+  applied_to_literature_index: boolean;
+};
+
+export type ReferenceApprovalSummaryResponse = {
+  generated_at: string;
+  relative_path: string;
+  summary: Record<string, number>;
+  latest_by_literature: Record<string, ReferenceApproval>;
+};
+
+export type ReferenceApprovalResponse = ReferenceApproval & {
+  literature_index_modified: boolean;
+  summary: ReferenceApprovalSummaryResponse;
+  applied_record: Record<string, unknown> | null;
+};
+
+export type CitationGroundingItem = {
+  grounding_id: string;
+  claim_id: string;
+  claim: string;
+  candidate_chunk_id: string | null;
+  literature_id: string | null;
+  source_file: string | null;
+  text_excerpt: string;
+  grounding_strength: "strong" | "moderate" | "weak" | "unsupported" | "needs_human_review" | string;
+  signals: Record<string, unknown>;
+  limitations: string[];
+  requires_human_review: boolean;
+};
+
+export type CitationGroundingReport = {
+  generated_at: string;
+  relative_path: string;
+  items: CitationGroundingItem[];
+  summary: Record<string, number>;
+};
+
+export type ManuscriptReferenceRecord = {
+  literature_id: string;
+  title: string | null;
+  authors: string[];
+  year: number | null;
+  doi: string | null;
+  journal: string | null;
+  source_file: string | null;
+  metadata_status: string | null;
+  reference_verification_status: string | null;
+  reference_verification_id: string | null;
+  human_verified: boolean;
+  warning?: string;
+  verification_results?: ReferenceVerificationResult[];
+};
+
+export type ManuscriptReferencesStatus = {
+  generated_at: string;
+  relative_path: string;
+  preview_file: string;
+  verified_references: ManuscriptReferenceRecord[];
+  candidate_references: ManuscriptReferenceRecord[];
+  placeholder_records: ManuscriptReferenceRecord[];
+  warnings: string[];
+};
+
+export type ManuscriptReferencesPreview = {
   relative_path: string;
   content: string;
 };

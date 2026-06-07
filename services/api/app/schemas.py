@@ -112,6 +112,8 @@ class LiteratureRecord(BaseModel):
     quality_score: float | None = None
     quality_label: str | None = None
     needs_manual_review: bool | None = None
+    reference_verification_status: str | None = None
+    reference_verification_id: str | None = None
 
 
 class LiteraturePatch(BaseModel):
@@ -549,3 +551,66 @@ class FigureProvenanceRecord(BaseModel):
     created_at: str
     data_hash: str
     warnings: list[str] = Field(default_factory=list)
+
+
+class LLMTestRequest(BaseModel):
+    prompt: str = Field(default="Return a short JSON health check.", max_length=1000)
+    prompt_version: str = Field(default="literature_answer_v1", max_length=120)
+
+    @field_validator("prompt", "prompt_version")
+    @classmethod
+    def validate_non_empty(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("value must not be empty")
+        return cleaned
+
+
+class LiteratureRAGAskRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    top_k: int = Field(default=5, ge=1, le=10)
+
+    @field_validator("question")
+    @classmethod
+    def validate_question(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("question must not be empty")
+        return cleaned
+
+
+class LiteratureMetadataLookupRequest(BaseModel):
+    provider: Literal["mock_fixture", "crossref_optional", "semantic_scholar_optional"] = "mock_fixture"
+
+
+class ReferenceVerificationRunRequest(BaseModel):
+    literature_id: str | None = Field(default=None, max_length=120)
+    provider: Literal[
+        "mock_fixture",
+        "crossref_optional",
+        "semantic_scholar_optional",
+        "pubmed_optional",
+    ] = "mock_fixture"
+
+    @field_validator("literature_id")
+    @classmethod
+    def validate_literature_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+        if "/" in cleaned or "\\" in cleaned or ".." in cleaned:
+            raise ValueError("literature_id must be an identifier, not a path")
+        return cleaned
+
+
+class ReferenceApprovalRequest(BaseModel):
+    decision: Literal["approved", "rejected", "needs_manual_check"]
+    reason: str | None = Field(default="", max_length=1000)
+    apply_to_literature_index: bool = False
+
+    @field_validator("reason")
+    @classmethod
+    def validate_reason(cls, value: str | None) -> str:
+        return (value or "").strip()

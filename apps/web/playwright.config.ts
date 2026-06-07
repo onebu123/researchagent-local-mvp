@@ -3,6 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
+  workers: Number.parseInt(process.env.PLAYWRIGHT_WORKERS ?? "1", 10),
   expect: {
     timeout: 8_000
   },

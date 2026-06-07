@@ -1,9 +1,19 @@
 import { AlertTriangle, FileCheck2, ShieldCheck, X } from "lucide-react";
-import type { TrustSummary } from "@/lib/types";
+import type {
+  CitationGroundingReport,
+  ManuscriptReferencesStatus,
+  ReferenceApprovalSummaryResponse,
+  ReferenceVerificationSummaryResponse,
+  TrustSummary
+} from "@/lib/types";
 
 type GlobalTrustDashboardProps = {
   open: boolean;
   summary: TrustSummary;
+  referenceVerificationSummary?: ReferenceVerificationSummaryResponse;
+  referenceApprovalSummary?: ReferenceApprovalSummaryResponse;
+  citationGrounding?: CitationGroundingReport;
+  manuscriptReferencesStatus?: ManuscriptReferencesStatus;
   loading?: boolean;
   onOpenReadiness?: () => void;
   onClose: () => void;
@@ -12,6 +22,10 @@ type GlobalTrustDashboardProps = {
 export function GlobalTrustDashboard({
   open,
   summary,
+  referenceVerificationSummary,
+  referenceApprovalSummary,
+  citationGrounding,
+  manuscriptReferencesStatus,
   loading = false,
   onOpenReadiness,
   onClose
@@ -84,6 +98,34 @@ export function GlobalTrustDashboard({
               </dl>
             </article>
           </div>
+
+          <article className="rounded-[8px] border border-slate-200 p-4">
+            <div className="mb-3 text-sm font-black text-slate-950">Reference Trust</div>
+            <dl className="grid gap-2 text-xs font-semibold text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="flex items-center justify-between gap-3 rounded bg-slate-50 px-3 py-2">
+                <dt>verification_needs_review</dt>
+                <dd className="font-mono text-slate-950">
+                  {referenceVerificationSummary?.summary.needs_human_review ?? 0}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded bg-slate-50 px-3 py-2">
+                <dt>approvals_applied</dt>
+                <dd className="font-mono text-slate-950">
+                  {referenceApprovalSummary?.summary.applied_to_literature_index ?? 0}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded bg-slate-50 px-3 py-2">
+                <dt>grounding_strong</dt>
+                <dd className="font-mono text-slate-950">{citationGrounding?.summary.strong ?? 0}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded bg-slate-50 px-3 py-2">
+                <dt>formal_references</dt>
+                <dd className="font-mono text-slate-950">
+                  {manuscriptReferencesStatus?.verified_references.length ?? 0}
+                </dd>
+              </div>
+            </dl>
+          </article>
 
           {summary.failed_run_diagnostics.length ? (
             <article className="rounded-[8px] border border-rose-200 bg-rose-50 p-4">
