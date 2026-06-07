@@ -185,6 +185,43 @@ export type WorkspaceExportManifest = {
   message?: string;
 };
 
+export type ProductionScaffoldCapability = {
+  name: string;
+  mode: string;
+  configured: boolean;
+  fallback: string;
+  notes: string[];
+};
+
+export type ProductionScaffoldReport = {
+  version: string;
+  name: string;
+  generated_at: string;
+  environment: string;
+  status: string;
+  demo_safe: boolean;
+  mock_fallback: {
+    llm_mode: string;
+    no_api_key_required: boolean;
+    no_external_network_required: boolean;
+  };
+  capabilities: ProductionScaffoldCapability[];
+  worker: {
+    mode: string;
+    concurrency: number;
+    entrypoint: string;
+    fallback: string;
+  };
+  deployment_documents: string[];
+  validation: {
+    script: string;
+    requires_api_key: boolean;
+    requires_external_network: boolean;
+  };
+  guardrails: string[];
+  blocking_items: string[];
+};
+
 export type WorkflowRunResponse = {
   project_id: string;
   workflow_status: string;

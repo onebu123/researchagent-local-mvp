@@ -153,3 +153,21 @@ v1.6 在首页新增 `Workspace Readiness`，用于把常用本地工作区状�
 4. 运行 `python scripts/validate_v16.py` 做本地验收。
 
 v1.6 不新增登录、数据库、任务队列、部署流程或后端 UX API。后端不可用时，前端继续使用 mock fallback，因此无 API key、无外网也能演示基本界面。
+
+## ResearchAgent v2.0 Research Workspace Scaffold
+
+v2.0 在首页新增 `Research Workspace Scaffold`，用于查看本地 scaffold 状态：
+
+- database：默认 `sqlite`，PostgreSQL 只是可选配置。
+- task queue：默认 `inline`，worker scaffold 可本地 smoke test。
+- auth：默认 `disabled`，共享环境必须另行做服务端鉴权。
+- containers：提供 API、web、worker 和可选服务的 Docker scaffold。
+
+推荐流程：
+
+1. 运行 `python scripts/run_demo.py` 生成本地 demo artifacts。
+2. 打开首页，查看 `Research Workspace Scaffold`。
+3. 运行 `python -m app.workers.research_worker` 做 worker smoke。
+4. 运行 `python scripts/validate_v2.py` 做本地验收。
+
+v2.0 不要求 API key、外网、PostgreSQL、Redis、auth secret 或云服务器。部署说明在 `docs/deployment_v2.md`，它是 operator planning 文档，不是托管环境证明。

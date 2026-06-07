@@ -9,7 +9,7 @@ test("v0.3 dashboard panels render with mock fallback", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByText("ResearchAgent v0.3")).toBeVisible();
-  await expect(page.getByText("mock fallback")).toBeVisible();
+  await expect(page.getByText("mock fallback", { exact: true })).toBeVisible();
 
   await page.getByText("论文 Markdown 初稿").click();
   await expect(page.getByText("Mock manuscript preview")).toBeVisible();

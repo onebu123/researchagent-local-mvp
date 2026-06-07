@@ -77,3 +77,13 @@ Project Export 是本地项目材料包，不是生产备份。
 - v1.6 必须保留 mock fallback；无 API key、无外网或后端不可用时，前端仍应可渲染 demo 状态。
 - v1.6 不得伪造 DOI、引用、p-values、significance、causal claims、OCR output、verified references 或真实实验结论。
 - 本地验收命令是 `python scripts/validate_v16.py`。
+
+## ResearchAgent v2.0 Research Workspace Scaffold 的边界
+
+- v2.0 提供可选 PostgreSQL、任务队列、auth、Docker、worker 和部署文档 scaffold；默认本地 demo 仍使用 SQLite、inline queue、disabled auth 和 mock fallback。
+- `GET /api/system/production-scaffold` 只能报告配置状态和 fallback，不连接或验证外部云资源。
+- PostgreSQL、Redis、auth secret 和 worker profile 都是可选项；未配置时不得阻断 demo、pytest、Playwright 或 validation。
+- Docker 和 deployment 文档不代表托管环境、备份恢复、监控告警、TLS、权限、租户隔离或回滚已经完成。
+- auth scaffold 不等于真实权限系统；任何共享环境都需要服务端鉴权、对象级授权、secret 管理、日志脱敏和安全回归。
+- v2.0 不得伪造 DOI、引用、p-values、significance、causal claims、OCR output、verified references 或真实实验结论。
+- 本地验收命令是 `python scripts/validate_v2.py`。

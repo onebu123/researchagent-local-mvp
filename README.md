@@ -300,3 +300,30 @@ python scripts/validate_v16.py
 
 - [v1.6 Acceptance Criteria](docs/v1.6_acceptance_criteria.md)
 - [v1.6 Acceptance Report](docs/v1.6_acceptance_report.md)
+
+## ResearchAgent v2.0 Research Workspace Scaffold
+
+ResearchAgent v2.0 adds a Research Workspace scaffold for local validation and deployment planning:
+
+- optional PostgreSQL configuration and Docker Compose profile
+- inline task queue fallback plus worker smoke entrypoint
+- disabled-by-default auth scaffold
+- API/web Dockerfiles and compose profiles
+- `GET /api/system/production-scaffold`
+- `docs/deployment_v2.md`
+- `scripts/validate_v2.py`
+
+Defaults remain local-demo friendly: SQLite, inline queue, disabled auth, and `LLM_MODE=mock`. No API key, external network, PostgreSQL, Redis, auth secret, or cloud server is required for the demo.
+
+v2.0 commands:
+
+```bash
+python scripts/validate_v2.py
+python -m app.workers.research_worker
+```
+
+v2.0 is a scaffold and validation milestone. It is not a hosted deployment proof, compliance evidence, peer review evidence, or public production assurance.
+
+- [v2.0 Acceptance Criteria](docs/v2.0_acceptance_criteria.md)
+- [v2.0 Acceptance Report](docs/v2.0_acceptance_report.md)
+- [v2.0 Deployment Scaffold](docs/deployment_v2.md)

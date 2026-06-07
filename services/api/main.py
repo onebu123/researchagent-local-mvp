@@ -17,6 +17,7 @@ from app.api import (
     uploads,
     workflow,
 )
+from app.config import settings
 from app.database import initialize_database
 
 
@@ -30,16 +31,7 @@ app = FastAPI(title="ResearchAgent API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3001",
-        "http://localhost:3002",
-        "http://127.0.0.1:3002",
-        "http://localhost:3100",
-        "http://127.0.0.1:3100",
-    ],
+    allow_origins=list(settings.cors_allow_origins),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

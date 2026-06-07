@@ -1,0 +1,1 @@
+"""ResearchAgent worker scaffold package."""

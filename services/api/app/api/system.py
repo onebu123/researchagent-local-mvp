@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.schemas import LLMTestRequest
 from app.tools.llm_client import llm_client
+from app.tools.production_scaffold import get_production_scaffold_report
 from app.tools.prompt_registry import list_prompts, load_prompt
 
 router = APIRouter()
@@ -60,3 +61,8 @@ def get_prompt_registry() -> dict[str, Any]:
             "bibtex_generation_v1",
         ],
     }
+
+
+@router.get("/system/production-scaffold")
+def get_production_scaffold() -> dict[str, Any]:
+    return get_production_scaffold_report()

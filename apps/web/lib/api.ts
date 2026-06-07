@@ -66,6 +66,7 @@ import type {
   ProjectExportInfo,
   ProjectDetail,
   ProjectRead,
+  ProductionScaffoldReport,
   ReferenceApproval,
   ReferenceApprovalDecision,
   ReferenceApprovalResponse,
@@ -130,6 +131,10 @@ export async function testLLM(prompt: string, promptVersion = "literature_answer
 
 export async function getPromptRegistry(): Promise<PromptRegistry> {
   return request<PromptRegistry>("/api/system/prompts");
+}
+
+export async function getProductionScaffold(): Promise<ProductionScaffoldReport> {
+  return request<ProductionScaffoldReport>("/api/system/production-scaffold");
 }
 
 export async function getLLMCalls(projectId: string): Promise<LLMCallLogEntry[]> {
@@ -1789,6 +1794,75 @@ export const mockWorkspaceExport: WorkspaceExportManifest = {
     "Workspace export is a local MVP artifact package, not a production backup.",
     "Generated DOCX and LaTeX are drafts for human review.",
     "The trust report is a local workflow summary, not scientific or compliance validation."
+  ]
+};
+
+export const mockProductionScaffold: ProductionScaffoldReport = {
+  version: "v2.0",
+  name: "Research Workspace scaffold",
+  generated_at: new Date().toISOString(),
+  environment: "local",
+  status: "scaffold_ready_for_local_validation",
+  demo_safe: true,
+  mock_fallback: {
+    llm_mode: "mock",
+    no_api_key_required: true,
+    no_external_network_required: true
+  },
+  capabilities: [
+    {
+      name: "database",
+      mode: "sqlite",
+      configured: false,
+      fallback: "sqlite",
+      notes: ["PostgreSQL is optional and not required for local demo validation."]
+    },
+    {
+      name: "task_queue",
+      mode: "inline",
+      configured: false,
+      fallback: "inline",
+      notes: ["Worker scaffold can be smoke-tested without Redis or an external queue."]
+    },
+    {
+      name: "auth",
+      mode: "disabled",
+      configured: false,
+      fallback: "disabled",
+      notes: ["Auth scaffold is disabled by default and must be enforced server-side before shared use."]
+    },
+    {
+      name: "containers",
+      mode: "docker_compose",
+      configured: true,
+      fallback: "local_process",
+      notes: ["Dockerfiles and compose profiles support repeatable local checks."]
+    }
+  ],
+  worker: {
+    mode: "inline",
+    concurrency: 1,
+    entrypoint: "python -m app.workers.research_worker",
+    fallback: "inline"
+  },
+  deployment_documents: [
+    "docs/deployment_v2.md",
+    "docs/v2.0_acceptance_criteria.md",
+    "docs/v2.0_acceptance_report.md"
+  ],
+  validation: {
+    script: "python scripts/validate_v2.py",
+    requires_api_key: false,
+    requires_external_network: false
+  },
+  guardrails: [
+    "Do not fabricate DOI, citations, p-values, significance, causal claims, OCR output, or scientific conclusions.",
+    "Do not commit secrets, environment files with real values, stack traces, or local absolute paths."
+  ],
+  blocking_items: [
+    "Auth is disabled by default.",
+    "PostgreSQL and queue backends are optional scaffolds.",
+    "Deployment requires operator review of TLS, backups, monitoring, and rollback steps."
   ]
 };
 

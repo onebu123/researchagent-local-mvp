@@ -1,26 +1,63 @@
 services:
   api:
-    image: python:3.10-slim
-    working_dir: /workspace/services/api
-    command: sh -c "pip install -e . && uvicorn main:app --host 0.0.0.0 --port 8000"
-    volumes:
-      - .:/workspace
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
     ports:
       - "8000:8000"
     environment:
       PROJECTS_ROOT: /workspace/projects
       DATABASE_PATH: /workspace/projects/research_agent.sqlite3
+      DATABASE_BACKEND: sqlite
+      QUEUE_MODE: inline
+      AUTH_MODE: disabled
       LLM_MODE: mock
+    volumes:
+      - research_projects:/workspace/projects
 
   web:
-    image: node:22-alpine
-    working_dir: /workspace/apps/web
-    command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0"
-    volumes:
-      - .:/workspace
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
     ports:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
     depends_on:
       - api
+
+  worker:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    command: python -m app.workers.research_worker
+    profiles: ["worker"]
+    environment:
+      PROJECTS_ROOT: /workspace/projects
+      DATABASE_PATH: /workspace/projects/research_agent.sqlite3
+      QUEUE_MODE: inline
+      LLM_MODE: mock
+    volumes:
+      - research_projects:/workspace/projects
+
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_DB: research_agent
+      POSTGRES_USER: research_agent
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set-local-postgres-password}
+    volumes:
+      - research_postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    profiles: ["queue"]
+    ports:
+      - "6379:6379"
+
+volumes:
+  research_projects:
+  research_postgres:

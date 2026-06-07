@@ -252,3 +252,13 @@ npx playwright test
 - v1.6 必须保留 mock fallback；无 API key、无外网或后端不可用时，demo 仍需可渲染并清楚标记本地示例状态。
 - v1.6 不得新增登录、auth、tenancy、PostgreSQL、Redis、任务队列、云部署或 production scaffold；这些只允许在 v2.0 scaffold 中以可选、本地安全的方式处理。
 - v1.6 不得伪造 DOI、引用、p-values、significance、causal claims、OCR output、verified references 或真实科学结论。
+
+## ResearchAgent v2.0 开发边界
+- `python scripts/validate_v2.py` 必须保持可运行，并继续通过 v1.6 validation 保护既有能力。
+- v2.0 是 Research Workspace scaffold：允许新增可选 PostgreSQL、任务队列、auth scaffold、Docker、部署文档和 worker smoke，但不得让它们成为本地 demo 的硬依赖。
+- 默认模式必须保持 `DATABASE_BACKEND=sqlite`、`QUEUE_MODE=inline`、`AUTH_MODE=disabled` 和 `LLM_MODE=mock`。
+- `/api/system/production-scaffold` 只能报告配置是否存在、fallback 状态、guardrails 和 operator caveats；不得返回连接串、token、secret、环境文件内容、stack trace 或本机绝对路径。
+- Docker Compose profile 中的 PostgreSQL、Redis 和 worker 只能作为本地可选 scaffold；不得写入真实密码、云凭证或生产服务器信息。
+- auth scaffold 不等于权限系统；共享环境必须服务端强制鉴权、租户/对象授权、日志脱敏和回滚计划后才能暴露。
+- v2.0 不得伪造 DOI、引用、p-values、significance、causal claims、OCR output、verified references 或真实科学结论。
+- v2.0 不得宣称 peer review、compliance 或 public production readiness。

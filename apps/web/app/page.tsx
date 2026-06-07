@@ -65,6 +65,7 @@ import { PatchItemEditorPanel } from "@/components/PatchItemEditorPanel";
 import { PatchMergePanel } from "@/components/PatchMergePanel";
 import { ProgressPanel } from "@/components/ProgressPanel";
 import { ProjectExportPanel } from "@/components/ProjectExportPanel";
+import { ProductionScaffoldPanel } from "@/components/ProductionScaffoldPanel";
 import { RAGQualityPanel } from "@/components/RAGQualityPanel";
 import { RecentOutputs } from "@/components/RecentOutputs";
 import { ResourcePanel } from "@/components/ResourcePanel";
@@ -111,6 +112,7 @@ import {
   getAuditExportReport,
   getAuditExports,
   getEnhancedAnalysisTimeline,
+  getProductionScaffold,
   getClaimAlignment,
   getEvidence,
   getEvidenceClaimReviews,
@@ -199,6 +201,7 @@ import {
   mockMetadataRevertPreview,
   mockPDFPageTextPreview,
   mockProjectExport,
+  mockProductionScaffold,
   mockWorkspaceExport,
   mockReadinessReport,
   mockReviewerClosureSummary,
@@ -321,6 +324,7 @@ import type {
   OutputItem,
   ProjectDetail,
   ProjectExportInfo,
+  ProductionScaffoldReport,
   ReferenceApproval,
   ReferenceApprovalDecision,
   ReferenceApprovalSummaryResponse,
@@ -566,6 +570,8 @@ export default function DashboardPage() {
   const [projectExport, setProjectExport] = useState<ProjectExportInfo>(mockProjectExport);
   const [workspaceExport, setWorkspaceExport] =
     useState<WorkspaceExportManifest>(mockWorkspaceExport);
+  const [productionScaffold, setProductionScaffold] =
+    useState<ProductionScaffoldReport>(mockProductionScaffold);
   const [detailLoading, setDetailLoading] = useState(false);
   const [decisionLoadingId, setDecisionLoadingId] = useState<string | null>(null);
   const [issueReviewLoadingId, setIssueReviewLoadingId] = useState<string | null>(null);
@@ -583,14 +589,19 @@ export default function DashboardPage() {
           return;
         }
         const selectedProject = projects.find((item) => item.id === "demo_project") ?? projects[0];
-        const detail = await getProject(selectedProject.id);
+        const [detail, scaffold] = await Promise.all([
+          getProject(selectedProject.id),
+          getProductionScaffold()
+        ]);
         if (!active) return;
         setProject(detail);
+        setProductionScaffold(scaffold);
         setApiOnline(true);
         setMessage(undefined);
       } catch {
         if (!active) return;
         setProject(mockProject);
+        setProductionScaffold(mockProductionScaffold);
         setApiOnline(false);
       }
     }
@@ -2551,6 +2562,8 @@ export default function DashboardPage() {
                 onOpenStatisticalAssistant={handleOpenStatisticalAssistant}
                 onOpenWorkspaceExport={handleOpenWorkspaceExport}
               />
+
+              <ProductionScaffoldPanel report={productionScaffold} apiOnline={apiOnline} />
 
               <LocalMVPOverviewPanel
                 project={project}
