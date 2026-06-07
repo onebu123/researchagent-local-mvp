@@ -68,3 +68,12 @@ Project Export 是本地项目材料包，不是生产备份。
 - 导出逻辑不得记录 API key、secret、完整 prompt、stack trace、环境文件内容或本机绝对路径。
 - 导出逻辑不得伪造 DOI、作者、年份、期刊、引用、p-values、significance、causal claims、OCR output 或真实实验结论。
 - Candidate 和 placeholder references 不得因为出现在导出文件中而变成 verified references 或正式 BibTeX/References。
+
+## ResearchAgent v1.6 UX consolidation 的边界
+
+- `Workspace Readiness` 是本地 dashboard 的首屏 UX consolidation，不是新的后端服务、权限系统、部署入口或质量认证。
+- v1.6 不新增 `/ux` API、数据库表、任务队列、auth scaffold、云资源或外部服务依赖。
+- `Workspace Readiness` 只能展示 runtime mode、workflow、trust 和 exports 的本地导航状态；这些状态不证明科学事实、合规状态、审稿状态或生产可用性。
+- v1.6 必须保留 mock fallback；无 API key、无外网或后端不可用时，前端仍应可渲染 demo 状态。
+- v1.6 不得伪造 DOI、引用、p-values、significance、causal claims、OCR output、verified references 或真实实验结论。
+- 本地验收命令是 `python scripts/validate_v16.py`。

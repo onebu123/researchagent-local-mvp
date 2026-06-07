@@ -135,3 +135,21 @@ v1.5 在右侧工具区新增 `Workspace Export`。建议流程：
 `research_workspace_export.docx` 用于人工审阅本地 workspace 摘要；`research_workspace_export.tex` 只是 LaTeX source，不执行完整编译；`trust_report.json` 和 `trust_report.md` 汇总 local MVP 证据、来源文件、audit hash chain 状态和 caveats。后端不可用时，前端仍显示 mock fallback，但真实文件生成必须调用后端 API。
 
 Workspace Export 不会把 candidate 或 placeholder references 升级为正式引用，不会生成 DOI、p-values、significance、causal claims 或 OCR output，也不作为 production、compliance 或 peer review 证据。
+
+## ResearchAgent v1.6 UX consolidation
+
+v1.6 在首页新增 `Workspace Readiness`，用于把常用本地工作区状态集中到首屏：
+
+- runtime mode：显示当前 demo 以 `Mock fallback active` 为默认可用状态。
+- workflow：提示本地 pipeline 仍依赖已有 artifacts 和人工复核。
+- trust：跳转到 `Global Trust Dashboard` 查看证据链和 caveats。
+- exports：跳转到 `Workspace Export` 查看 Word、LaTeX 和 trust report 交付物。
+
+推荐流程：
+
+1. 运行 `python scripts/run_demo.py` 生成本地 demo artifacts。
+2. 打开首页，先查看 `Workspace Readiness`。
+3. 点击 `Open Global Trust`、`Review RAG Quality`、`Open Statistical Assistant` 或 `Open Workspace Export` 进入已有抽屉面板。
+4. 运行 `python scripts/validate_v16.py` 做本地验收。
+
+v1.6 不新增登录、数据库、任务队列、部署流程或后端 UX API。后端不可用时，前端继续使用 mock fallback，因此无 API key、无外网也能演示基本界面。

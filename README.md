@@ -285,3 +285,18 @@ The frontend dashboard includes `Workspace Export` with mock fallback when the b
 
 - [v1.5 Acceptance Criteria](docs/v1.5_acceptance_criteria.md)
 - [v1.5 Acceptance Report](docs/v1.5_acceptance_report.md)
+
+## ResearchAgent v1.6 UX consolidation
+
+ResearchAgent v1.6 adds a first-screen `Workspace Readiness` panel for the local dashboard. It consolidates runtime mode, workflow state, trust status, and export availability, then routes users to the existing Global Trust, RAG Quality, Statistical Assistant, and Workspace Export panels.
+
+The v1.6 UX keeps the existing dashboard and drawer workflow. It does not add new backend routes, authentication, PostgreSQL, queues, deployment behavior, or scientific claims. The dashboard keeps mock fallback: the demo remains usable without an API key or external network access, and unavailable backend services are shown as local demo state.
+
+v1.6 commands:
+
+```bash
+python scripts/validate_v16.py
+```
+
+- [v1.6 Acceptance Criteria](docs/v1.6_acceptance_criteria.md)
+- [v1.6 Acceptance Report](docs/v1.6_acceptance_report.md)

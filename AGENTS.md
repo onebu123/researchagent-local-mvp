@@ -244,3 +244,11 @@ npx playwright test
 - Workspace Export 不得伪造 DOI、作者、年份、期刊、引用、p-values、significance、causal claims、OCR output 或真实实验结论。
 - Candidate、placeholder、mock provider 产物不得因为被写入 Word、LaTeX 或 trust report 而变成 verified references、formal References 或 formal BibTeX。
 - 前端 `WorkspaceExportPanel` 必须保留 mock fallback；后端不可用时 dashboard 仍需可渲染，但真实导出必须调用后端 API。
+
+## ResearchAgent v1.6 开发边界
+- `python scripts/validate_v16.py` 必须保持可运行，并继续通过 v1.5 validation 保护既有能力。
+- v1.6 是 UX consolidation，只能在现有 dashboard + drawer 工作流上增加 `Workspace Readiness` 收口入口，不得引入新的后端 `/ux` 路由、持久化状态或外部服务依赖。
+- `Workspace Readiness` 只能汇总 runtime mode、workflow、trust 和 exports 的本地可读状态；不得把 UI 状态当成权限、安全、合规、审稿或生产可用证明。
+- v1.6 必须保留 mock fallback；无 API key、无外网或后端不可用时，demo 仍需可渲染并清楚标记本地示例状态。
+- v1.6 不得新增登录、auth、tenancy、PostgreSQL、Redis、任务队列、云部署或 production scaffold；这些只允许在 v2.0 scaffold 中以可选、本地安全的方式处理。
+- v1.6 不得伪造 DOI、引用、p-values、significance、causal claims、OCR output、verified references 或真实科学结论。

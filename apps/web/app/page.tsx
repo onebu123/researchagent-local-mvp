@@ -88,6 +88,7 @@ import { StatCard } from "@/components/StatCard";
 import { TaskCenter } from "@/components/TaskCenter";
 import { Topbar } from "@/components/Topbar";
 import { UploadPanel } from "@/components/UploadPanel";
+import { UXConsolidationPanel } from "@/components/UXConsolidationPanel";
 import { VersionLineagePanel } from "@/components/VersionLineagePanel";
 import { VerifiedReferencesPanel } from "@/components/VerifiedReferencesPanel";
 import { WorkspaceExportPanel } from "@/components/WorkspaceExportPanel";
@@ -2536,6 +2537,20 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </section>
+
+              <UXConsolidationPanel
+                project={project}
+                apiOnline={apiOnline}
+                running={running}
+                trustSummary={trustSummary}
+                readinessReport={readinessReport}
+                projectExport={projectExport}
+                workspaceExport={workspaceExport}
+                onOpenTrust={handleOpenGlobalTrust}
+                onOpenRAGQuality={handleOpenRAGQuality}
+                onOpenStatisticalAssistant={handleOpenStatisticalAssistant}
+                onOpenWorkspaceExport={handleOpenWorkspaceExport}
+              />
 
               <LocalMVPOverviewPanel
                 project={project}
