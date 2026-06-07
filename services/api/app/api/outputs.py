@@ -15,6 +15,7 @@ from app.tools.analysis_compare import (
     load_analysis_comparison,
 )
 from app.tools.analysis_timeline import generate_analysis_timeline
+from app.tools.statistical_assistant import generate_statistical_assistant_report
 
 router = APIRouter()
 
@@ -97,6 +98,28 @@ def get_project_claim_alignment(project_id: str) -> dict[str, Any]:
 @router.get("/projects/{project_id}/analysis/provenance")
 def get_project_analysis_provenance(project_id: str) -> dict[str, Any]:
     return _read_project_json_object(project_id, "analysis/analysis_provenance.json")
+
+
+@router.get("/projects/{project_id}/analysis/statistical-assistant")
+def get_project_statistical_assistant(project_id: str) -> dict[str, Any]:
+    return _read_project_json_object(project_id, "analysis/statistical_assistant_report.json")
+
+
+@router.post("/projects/{project_id}/analysis/statistical-assistant/generate")
+def generate_project_statistical_assistant(project_id: str) -> dict[str, Any]:
+    try:
+        project_service.require_project(project_id)
+    except ProjectNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    project_dir = storage_service.project_dir(project_id)
+    try:
+        storage_service.ensure_inside_project(project_id, project_dir / "analysis" / "result_summary.json")
+        storage_service.ensure_inside_project(project_id, project_dir / "analysis" / "processed_data.csv")
+        return generate_statistical_assistant_report(project_dir, project_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/projects/{project_id}/analysis/compare")

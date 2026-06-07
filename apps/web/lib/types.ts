@@ -771,6 +771,79 @@ export type AnalysisProvenance = {
   is_demo_data?: boolean;
 };
 
+export type StatisticalAssistantVariableRole = {
+  column: string;
+  dtype: string;
+  role_suggestions: string[];
+  reasons: string[];
+};
+
+export type StatisticalAssistantDescriptiveCard = {
+  column: string;
+  mean: number | null;
+  std: number | null;
+  min: number | null;
+  max: number | null;
+  missing_count: number;
+  recommended_visualization: string;
+  notes: string[];
+};
+
+export type StatisticalAssistantCorrelationItem = {
+  x: string;
+  y: string;
+  correlation: number;
+  association_strength: string;
+  recommendation: string;
+  limitations: string[];
+};
+
+export type StatisticalAssistantMethodSuggestion = {
+  method: string;
+  status: string;
+  reason: string;
+  outputs: string[];
+};
+
+export type StatisticalAssistantReport = {
+  report_id: string;
+  generated_at: string;
+  relative_path: string;
+  source_files: {
+    summary: string;
+    processed_data: string;
+  };
+  dataset: {
+    row_count: number;
+    column_count: number;
+    columns: string[];
+    numeric_columns: string[];
+    categorical_columns: string[];
+    is_demo_data: boolean;
+  };
+  data_health: {
+    missingness: Array<{
+      column: string;
+      missing_count: number;
+      missing_rate: number;
+      severity: string;
+    }>;
+    missing_value_columns: number;
+    constant_columns: string[];
+    near_constant_columns: Array<Record<string, unknown>>;
+    outlier_flags: Array<Record<string, unknown>>;
+    outlier_flagged_columns: number;
+    small_sample_warning: boolean;
+    warnings: string[];
+  };
+  variable_roles: StatisticalAssistantVariableRole[];
+  descriptive_cards: StatisticalAssistantDescriptiveCard[];
+  correlation_review: StatisticalAssistantCorrelationItem[];
+  method_suggestions: StatisticalAssistantMethodSuggestion[];
+  guardrails: string[];
+  limitations: string[];
+};
+
 export type PDFQualityReportRecord = {
   source_file: string;
   metadata_file: string;

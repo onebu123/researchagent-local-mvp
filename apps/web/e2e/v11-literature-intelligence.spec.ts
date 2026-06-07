@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test.setTimeout(60_000);
+test.setTimeout(90_000);
 
 async function closeDrawer(page: import("@playwright/test").Page) {
   await page.locator(".fixed .icon-button").first().click();

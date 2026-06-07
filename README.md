@@ -231,3 +231,28 @@ RAG Quality 分数和 retrieval eval 指标只是本地检索质量启发式检�
 
 - [v1.3 验收标准](docs/v1.3_acceptance_criteria.md)
 - [v1.3 验收报告](docs/v1.3_acceptance_report.md)
+## ResearchAgent v1.4 Statistical Assistant
+
+ResearchAgent v1.4 adds a local Statistical Assistant for descriptive CSV analysis. It reads `analysis/result_summary.json` and `analysis/processed_data.csv`, then generates:
+
+- `analysis/statistical_assistant_report.json`
+- `analysis/statistical_assistant_notes.md`
+
+The report includes dataset health checks, variable role suggestions, descriptive cards, association candidates, method suggestions, guardrails, and limitations. Statistical Assistant is descriptive only: it does not generate p-values, does not claim statistical significance, and does not perform causal inference.
+
+v1.4 API:
+
+- `GET /api/projects/{project_id}/analysis/statistical-assistant`
+- `POST /api/projects/{project_id}/analysis/statistical-assistant/generate`
+
+v1.4 commands:
+
+```bash
+python scripts/run_demo.py
+python scripts/validate_v14.py
+```
+
+The frontend `Analysis` group contains `Statistical Assistant` and keeps mock fallback when the backend is unavailable. v1.4 remains a local MVP helper, not production-ready or peer-review-ready.
+
+- [v1.4 Acceptance Criteria](docs/v1.4_acceptance_criteria.md)
+- [v1.4 Acceptance Report](docs/v1.4_acceptance_report.md)

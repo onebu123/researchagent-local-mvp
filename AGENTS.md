@@ -225,3 +225,11 @@ npx playwright test
 - Placeholder metadata 必须降低 trust 或触发 warning；不得因为 hybrid score 高就把文献升级为 verified、approved、正式引用或强 citation grounding。
 - RAG answer 必须记录 `retrieval_mode`、source passage、score breakdown 和 limitations；不得泄露 API key、完整敏感 prompt 或本机绝对路径。
 - 前端 `RAGQualityPanel` 必须保留 mock fallback，并明确展示质量/评测为本地 heuristic。
+## ResearchAgent v1.4 开发边界
+- `python scripts/validate_v14.py` 必须保持可运行，并通过 v1.3 validation 保护既有能力。
+- Statistical Assistant 只能读取本地 `analysis/result_summary.json` 与 `analysis/processed_data.csv`，生成 `analysis/statistical_assistant_report.json` 和 `analysis/statistical_assistant_notes.md`。
+- Statistical Assistant 只能提供 descriptive data health、variable role suggestions、descriptive cards、association candidates 和 method suggestions；不得生成 p-values、statistical significance、causal inference、真实实验结论、production-ready 或 peer-review-ready 声明。
+- Association candidates 只能作为本地相关性审查提示，不得写成因果关系或科学事实证明。
+- v1.4 不得覆盖 `manuscript/draft.md`，不得自动改写 manuscript，且不得把 demo data 当真实实验数据。
+- v1.4 API 响应只能返回项目相对路径，不得泄露 API key、secret、完整 prompt、内部绝对路径或堆栈。
+- 前端 `StatisticalAssistantPanel` 必须保留 mock fallback；后端不可用时 dashboard 仍需可渲染。

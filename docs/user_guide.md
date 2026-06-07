@@ -98,3 +98,18 @@ v1.3 验证命令：
 python scripts/run_demo.py
 python scripts/validate_v13.py
 ```
+## v1.4 Statistical Assistant
+
+v1.4 在右侧 `Analysis` 分组新增 `Statistical Assistant`：
+
+- `Generate Local Report` 会基于本地 `analysis/result_summary.json` 和 `analysis/processed_data.csv` 生成 `analysis/statistical_assistant_report.json`。
+- 面板展示 dataset health、variable role suggestions、descriptive cards、association candidates、method suggestions 和 guardrails。
+- 后端不可用时仍会显示 mock fallback，便于本地 demo。
+- Statistical Assistant is descriptive only: it does not generate p-values, does not claim statistical significance, and does not perform causal inference.
+
+v1.4 验证命令：
+
+```bash
+python scripts/run_demo.py
+python scripts/validate_v14.py
+```

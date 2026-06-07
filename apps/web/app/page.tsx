@@ -81,6 +81,7 @@ import { RunHistoryPanel } from "@/components/RunHistoryPanel";
 import { SentenceIssuesPanel } from "@/components/SentenceIssuesPanel";
 import { Sidebar } from "@/components/Sidebar";
 import { SourcePassageEvidencePanel } from "@/components/SourcePassageEvidencePanel";
+import { StatisticalAssistantPanel } from "@/components/StatisticalAssistantPanel";
 import { ReferenceApprovalPanel } from "@/components/ReferenceApprovalPanel";
 import { ReferenceVerificationPanel } from "@/components/ReferenceVerificationPanel";
 import { StatCard } from "@/components/StatCard";
@@ -92,6 +93,7 @@ import { VerifiedReferencesPanel } from "@/components/VerifiedReferencesPanel";
 import { WorkflowTimeline } from "@/components/WorkflowTimeline";
 import {
   getAnalysisProvenance,
+  generateStatisticalAssistant,
   generateAnalysisComparison,
   generateLiteratureMetadataBatchReview,
   generateRevisionLineDiff,
@@ -152,6 +154,7 @@ import {
   getReviewerClosureSummary,
   getRunHistory,
   getSentenceIssues,
+  getStatisticalAssistant,
   getTrustSummary,
   checkPatchConflicts,
   confirmPatchMerge,
@@ -173,6 +176,7 @@ import {
   previewMetadataRevert,
   getVersionLineage,
   mockAnalysisProvenance,
+  mockStatisticalAssistantReport,
   mockAnalysisComparisons,
   mockAnalysisTimeline,
   mockAuditExport,
@@ -331,6 +335,7 @@ import type {
   RunHistory,
   SentenceIssue,
   SourcePassageEvidenceReport,
+  StatisticalAssistantReport,
   PatchConflictReport,
   PatchMergePreview,
   TrustSummary,
@@ -379,6 +384,7 @@ type DetailMode =
   | "bibtex"
   | "citationSupport"
   | "analysisProvenance"
+  | "statisticalAssistant"
   | "revisionDiff"
   | "revisionLineDiff"
   | "literatureHistory"
@@ -472,6 +478,8 @@ export default function DashboardPage() {
     useState<ManuscriptReferencesPreview>(mockManuscriptReferencesPreview);
   const [analysisProvenance, setAnalysisProvenance] =
     useState<AnalysisProvenance>(mockAnalysisProvenance);
+  const [statisticalAssistant, setStatisticalAssistant] =
+    useState<StatisticalAssistantReport>(mockStatisticalAssistantReport);
   const [revisionDecisions, setRevisionDecisions] =
     useState<RevisionDecision[]>(mockRevisionDecisions);
   const [manuscriptPatches, setManuscriptPatches] =
@@ -1206,6 +1214,33 @@ export default function DashboardPage() {
       () => (apiOnline ? getAnalysisProvenance(project.id) : Promise.resolve(mockAnalysisProvenance)),
       setAnalysisProvenance
     );
+  }
+
+  function handleOpenStatisticalAssistant() {
+    void openPanel(
+      "statisticalAssistant",
+      () =>
+        apiOnline
+          ? getStatisticalAssistant(project.id)
+          : Promise.resolve(mockStatisticalAssistantReport),
+      setStatisticalAssistant
+    );
+  }
+
+  async function handleGenerateStatisticalAssistant() {
+    setPatchActionLoading(true);
+    try {
+      const report = apiOnline
+        ? await generateStatisticalAssistant(project.id)
+        : mockStatisticalAssistantReport;
+      setStatisticalAssistant(report);
+      setMessage("Statistical assistant report generated from local descriptive analysis.");
+    } catch {
+      setStatisticalAssistant(mockStatisticalAssistantReport);
+      setMessage("Statistical assistant generation failed; using mock data.");
+    } finally {
+      setPatchActionLoading(false);
+    }
   }
 
   function handleOpenRevisionDiff() {
@@ -2694,6 +2729,14 @@ export default function DashboardPage() {
                     <Activity size={16} />
                     <span>查看分析来源</span>
                   </button>
+                  <button
+                    className="secondary-button justify-start"
+                    onClick={handleOpenStatisticalAssistant}
+                    aria-label="Statistical Assistant"
+                  >
+                    <BarChart3 size={16} />
+                    <span>Statistical Assistant</span>
+                  </button>
                   <button className="secondary-button justify-start" onClick={handleOpenAnalysisCompare}>
                     <Activity size={16} />
                     <span>Analysis 运行对比</span>
@@ -3253,6 +3296,14 @@ export default function DashboardPage() {
         open={detailMode === "analysisProvenance"}
         provenance={analysisProvenance}
         loading={detailLoading}
+        onClose={closeDetails}
+      />
+      <StatisticalAssistantPanel
+        open={detailMode === "statisticalAssistant"}
+        report={statisticalAssistant}
+        loading={detailLoading}
+        actionLoading={patchActionLoading}
+        onGenerate={handleGenerateStatisticalAssistant}
         onClose={closeDetails}
       />
       <AnalysisComparePanel

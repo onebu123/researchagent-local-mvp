@@ -51,3 +51,10 @@ Project Export 是本地项目材料包，不是生产备份。
 - `retrieval_eval_report.json` 使用本地 deterministic smoke cases，不是 benchmark-grade eval。
 - hit@k、MRR、quality score 和 score breakdown 不证明科学事实、引用真实性、统计显著性、因果关系、production-ready 或 peer-review-ready。
 - Placeholder metadata 会降低 retrieval trust，但不会因此自动进入 verified reference、正式 BibTeX 或正式 References。
+## v1.4 Statistical Assistant 的边界
+
+- Statistical Assistant 只做本地 descriptive CSV helper，不是推断统计系统。
+- `statistical_assistant_report.json` 里的 role suggestions、association candidates 和 method suggestions 都需要人工领域复核。
+- v1.4 does not generate p-values, does not claim statistical significance, and does not perform causal inference.
+- v1.4 不把 demo data 当真实实验数据，不自动改写 manuscript，也不声明 production-ready、compliance-ready 或 peer-review-ready。
+- `analysis/statistical_assistant_report.json` 和 `analysis/statistical_assistant_notes.md` 只包含项目相对路径，不应包含 API key、secret 或本机绝对路径。

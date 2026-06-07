@@ -84,6 +84,7 @@ import type {
   SentenceIssue,
   SourcePassageEvidenceReport,
   ReadinessReport,
+  StatisticalAssistantReport,
   TrustSummary,
   AuditVerifyResult,
   VersionLineage,
@@ -690,6 +691,23 @@ export async function reviewMetadataChange(
 
 export async function getAnalysisProvenance(projectId: string): Promise<AnalysisProvenance> {
   return request<AnalysisProvenance>(`/api/projects/${projectId}/analysis/provenance`);
+}
+
+export async function getStatisticalAssistant(
+  projectId: string
+): Promise<StatisticalAssistantReport> {
+  return request<StatisticalAssistantReport>(
+    `/api/projects/${projectId}/analysis/statistical-assistant`
+  );
+}
+
+export async function generateStatisticalAssistant(
+  projectId: string
+): Promise<StatisticalAssistantReport> {
+  return request<StatisticalAssistantReport>(
+    `/api/projects/${projectId}/analysis/statistical-assistant/generate`,
+    { method: "POST" }
+  );
 }
 
 export async function getPDFQualityReport(projectId: string): Promise<PDFQualityReport> {
@@ -1892,7 +1910,9 @@ export const mockAnalysisProvenance: AnalysisProvenance = {
   generated_files: [
     "analysis/result_summary.json",
     "analysis/processed_data.csv",
-    "analysis/run_log.txt"
+    "analysis/run_log.txt",
+    "analysis/statistical_assistant_report.json",
+    "analysis/statistical_assistant_notes.md"
   ],
   parameters: {
     analysis_mode: "descriptive_csv_profile",
@@ -1927,6 +1947,137 @@ export const mockAnalysisProvenance: AnalysisProvenance = {
     "ResearchAgent v0.4 does not perform causal inference."
   ],
   is_demo_data: true
+};
+
+export const mockStatisticalAssistantReport: StatisticalAssistantReport = {
+  report_id: "statistical_assistant_001",
+  generated_at: new Date().toISOString(),
+  relative_path: "analysis/statistical_assistant_report.json",
+  source_files: {
+    summary: "analysis/result_summary.json",
+    processed_data: "analysis/processed_data.csv"
+  },
+  dataset: {
+    row_count: 60,
+    column_count: 6,
+    columns: ["sample_id", "temperature", "concentration", "efficiency", "stability", "band_gap"],
+    numeric_columns: ["temperature", "concentration", "efficiency", "stability", "band_gap"],
+    categorical_columns: ["sample_id"],
+    is_demo_data: true
+  },
+  data_health: {
+    missingness: [
+      { column: "sample_id", missing_count: 0, missing_rate: 0, severity: "none" },
+      { column: "temperature", missing_count: 0, missing_rate: 0, severity: "none" },
+      { column: "concentration", missing_count: 0, missing_rate: 0, severity: "none" },
+      { column: "efficiency", missing_count: 0, missing_rate: 0, severity: "none" },
+      { column: "stability", missing_count: 0, missing_rate: 0, severity: "none" },
+      { column: "band_gap", missing_count: 0, missing_rate: 0, severity: "none" }
+    ],
+    missing_value_columns: 0,
+    constant_columns: [],
+    near_constant_columns: [],
+    outlier_flags: [
+      {
+        column: "efficiency",
+        method: "iqr_1_5",
+        count: 0,
+        rate: 0,
+        lower_bound: 22.4,
+        upper_bound: 32.1
+      }
+    ],
+    outlier_flagged_columns: 0,
+    small_sample_warning: false,
+    warnings: []
+  },
+  variable_roles: [
+    {
+      column: "sample_id",
+      dtype: "object",
+      role_suggestions: ["id-like", "categorical"],
+      reasons: ["Values are mostly unique and should not be treated as a numeric outcome."]
+    },
+    {
+      column: "efficiency",
+      dtype: "float64",
+      role_suggestions: ["numeric", "outcome-candidate"],
+      reasons: ["Name suggests a measured response; human review must confirm the role."]
+    },
+    {
+      column: "temperature",
+      dtype: "float64",
+      role_suggestions: ["numeric", "predictor-candidate"],
+      reasons: ["Numeric process variable candidate; no causal role is inferred."]
+    }
+  ],
+  descriptive_cards: [
+    {
+      column: "efficiency",
+      mean: 26.41,
+      std: 1.74,
+      min: 22.81,
+      max: 30.38,
+      missing_count: 0,
+      recommended_visualization: "histogram_and_boxplot",
+      notes: ["Descriptive card only; no inferential conclusion is generated."]
+    },
+    {
+      column: "temperature",
+      mean: 359.1,
+      std: 35.0,
+      min: 300.9,
+      max: 418.2,
+      missing_count: 0,
+      recommended_visualization: "histogram",
+      notes: ["Descriptive card only; no inferential conclusion is generated."]
+    }
+  ],
+  correlation_review: [
+    {
+      x: "temperature",
+      y: "band_gap",
+      correlation: 0.99,
+      association_strength: "strong_association_candidate",
+      recommendation: "Review a scatter plot and source data before making any domain claim.",
+      limitations: [
+        "Correlation is an association candidate only.",
+        "No causal relationship, p-value, or statistical significance is generated."
+      ]
+    }
+  ],
+  method_suggestions: [
+    {
+      method: "descriptive_summary",
+      status: "allowed",
+      reason: "Summarizes rows, columns, missing values, and numeric distributions.",
+      outputs: ["analysis/result_summary.json", "analysis/statistical_assistant_report.json"]
+    },
+    {
+      method: "inferential_statistics",
+      status: "blocked_without_human_protocol",
+      reason: "v1.4 does not generate p-values or statistical significance claims.",
+      outputs: []
+    },
+    {
+      method: "causal_inference",
+      status: "blocked",
+      reason: "v1.4 does not infer causal relationships from local CSV correlations.",
+      outputs: []
+    }
+  ],
+  guardrails: [
+    "Use this report as a local descriptive assistant, not as peer-review-ready evidence.",
+    "Do not turn association candidates into causal claims.",
+    "Do not report p-values or statistical significance from this v1.4 assistant.",
+    "Do not treat demo data as real experimental evidence."
+  ],
+  limitations: [
+    "ResearchAgent v1.4 performs descriptive statistical assistance only.",
+    "ResearchAgent v1.4 does not generate p-values or statistical significance claims.",
+    "ResearchAgent v1.4 does not perform causal inference.",
+    "Method and variable-role suggestions require human domain review."
+  ]
 };
 
 export const mockPDFQualityReport: PDFQualityReport = {
