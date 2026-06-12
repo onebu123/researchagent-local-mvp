@@ -20,8 +20,16 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
       - name: Install backend
         run: python -m pip install -e services/api pytest
+      - name: Install frontend for validation chain
+        working-directory: apps/web
+        run: npm ci
       - name: Compile Python
         run: python -m compileall services/api scripts
       - name: Test backend
