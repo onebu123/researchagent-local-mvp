@@ -46,7 +46,6 @@ REQUIRED_FILES = [
     "docs/local_mvp_limitations.md",
     "docs/github_release_checklist.md",
     "docs/v1.0_acceptance_report.md",
-    "docs/github_upload_status.md",
 ]
 REQUIRED_ZIP_ENTRIES = [
     "README_EXPORT.md",
@@ -221,8 +220,10 @@ def assert_files_and_docs() -> None:
     for marker in [".env", ".env.*", "node_modules/", ".runtime/", "projects/*/exports/"]:
         assert_true(marker in gitignore_text, f".gitignore must include {marker}")
 
-    github_status = (ROOT / "docs" / "github_upload_status.md").read_text(encoding="utf-8")
-    assert_true("GitHub" in github_status, "github_upload_status.md must describe GitHub status")
+    release_checklist = (ROOT / "docs" / "github_release_checklist.md").read_text(
+        encoding="utf-8"
+    )
+    assert_true("GitHub" in release_checklist, "release checklist must describe GitHub status")
 
 
 def assert_demo_workflow() -> None:
