@@ -30,6 +30,9 @@ jobs:
       - name: Install frontend for validation chain
         working-directory: apps/web
         run: npm ci
+      - name: Install Playwright Chromium for validation chain
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
       - name: Compile Python
         run: python -m compileall services/api scripts
       - name: Test backend
