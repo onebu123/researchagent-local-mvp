@@ -2,6 +2,8 @@
 .env
 .env.*
 **/__pycache__
+**/*.pyc
+**/*.pyo
 **/.pytest_cache
 **/.ruff_cache
 **/.mypy_cache
@@ -9,6 +11,14 @@
 apps/web/.next
 apps/web/playwright-report
 apps/web/test-results
+apps/web/blob-report
 test-results
+playwright-report
 projects
+dist
+build
+coverage
+*.sqlite
+*.sqlite3
+*.db
 *.log

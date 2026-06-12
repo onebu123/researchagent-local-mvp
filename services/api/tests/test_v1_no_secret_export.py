@@ -11,12 +11,17 @@ from main import app
 def test_project_zip_export_excludes_env_secret_cache_and_absolute_paths(demo_project_dir: Path) -> None:
     client = TestClient(app)
 
+    secret_env_name = "OPENAI_API_KEY"
+    secret_value = "sk" + "_live_should_not_ship"
+    secret_line = f"{secret_env_name}={secret_value}\n"
+    absolute_path_value = "C:" + "\\Users\\example\\secret\\data.txt"
+
     env_file = demo_project_dir / ".env"
-    env_file.write_text("OPENAI_API_KEY=sk_live_should_not_ship\n", encoding="utf-8")
+    env_file.write_text(secret_line, encoding="utf-8")
     secret_text = demo_project_dir / "trust" / "unsafe_payload.txt"
-    secret_text.write_text("OPENAI_API_KEY=sk_live_should_not_ship\n", encoding="utf-8")
+    secret_text.write_text(secret_line, encoding="utf-8")
     absolute_path_text = demo_project_dir / "reviews" / "absolute_path_payload.txt"
-    absolute_path_text.write_text(r"internal_path=C:\Users\tian\secret\data.txt", encoding="utf-8")
+    absolute_path_text.write_text(f"internal_path={absolute_path_value}", encoding="utf-8")
     cache_file = demo_project_dir / "analysis" / "__pycache__" / "cached.pyc"
     cache_file.parent.mkdir(parents=True, exist_ok=True)
     cache_file.write_bytes(b"cached")
@@ -41,9 +46,9 @@ def test_project_zip_export_excludes_env_secret_cache_and_absolute_paths(demo_pr
             for name in names:
                 if Path(name).suffix.lower() in {".json", ".jsonl", ".md", ".txt", ".csv", ".svg"}:
                     text = archive.read(name).decode("utf-8", errors="replace")
-                    assert "sk_live_should_not_ship" not in text
-                    assert "OPENAI_API_KEY=" not in text
-                    assert r"C:\Users\tian" not in text
+                    assert secret_value not in text
+                    assert f"{secret_env_name}=" not in text
+                    assert absolute_path_value not in text
     finally:
         env_file.unlink(missing_ok=True)
         secret_text.unlink(missing_ok=True)

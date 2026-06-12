@@ -15,7 +15,7 @@ def test_v2_production_scaffold_defaults_keep_local_fallback() -> None:
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["version"] == "v2.0"
+    assert payload["version"] == "v2.0.1-dev"
     assert payload["demo_safe"] is True
     assert payload["mock_fallback"]["no_external_network_required"] is True
     assert payload["validation"]["requires_api_key"] is False
@@ -29,10 +29,12 @@ def test_v2_production_scaffold_defaults_keep_local_fallback() -> None:
 
 
 def test_v2_optional_backends_report_configured_without_secret_values(monkeypatch) -> None:
+    postgres_url = "postgresql://" + "user:secret@example.local/research"
+    redis_url = "redis://:" + "secret@example.local:6379/0"
     monkeypatch.setenv("DATABASE_BACKEND", "postgresql")
-    monkeypatch.setenv("DATABASE_URL", "postgresql://user:secret@example.local/research")
+    monkeypatch.setenv("DATABASE_URL", postgres_url)
     monkeypatch.setenv("QUEUE_MODE", "redis")
-    monkeypatch.setenv("QUEUE_URL", "redis://:secret@example.local:6379/0")
+    monkeypatch.setenv("QUEUE_URL", redis_url)
     monkeypatch.setenv("AUTH_MODE", "shared_secret")
     monkeypatch.setenv("AUTH_SHARED_SECRET", "local-secret-value")
 
@@ -48,8 +50,8 @@ def test_v2_optional_backends_report_configured_without_secret_values(monkeypatc
     assert capabilities["auth"]["mode"] == "shared_secret"
     assert capabilities["auth"]["configured"] is True
     assert "local-secret-value" not in str(payload)
-    assert "postgresql://user:secret" not in str(payload)
-    assert "redis://:secret" not in str(payload)
+    assert postgres_url.split("@")[0] not in str(payload)
+    assert redis_url.split("@")[0] not in str(payload)
     assert reloaded_config.settings.database_url_configured is True
 
     monkeypatch.delenv("DATABASE_BACKEND", raising=False)

@@ -1,6 +1,6 @@
-# ResearchAgent v2.0 Deployment Scaffold
+# ResearchAgent v2.0.1-dev Deployment Scaffold
 
-This document describes the v2.0 Research Workspace scaffold. It is a local validation and operator planning guide, not a public deployment certificate.
+This document describes the v2.0 Research Workspace scaffold as maintained in the current `v2.0.1-dev` repository. It is a local validation and operator planning guide, not a public deployment certificate.
 
 ## Default Local Mode
 

@@ -20,6 +20,8 @@ from app.api import (
 from app.config import settings
 from app.database import initialize_database
 
+APP_VERSION = "v2.0.1-dev"
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -27,7 +29,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="ResearchAgent API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="ResearchAgent API", version=APP_VERSION, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -40,7 +42,7 @@ app.add_middleware(
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "research-agent-api", "version": "0.1.0"}
+    return {"status": "ok", "service": "research-agent-api", "version": APP_VERSION}
 
 
 app.include_router(projects.router, prefix="/api", tags=["projects"])
