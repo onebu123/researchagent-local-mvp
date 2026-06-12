@@ -1,59 +1,77 @@
-# Demo 演示流程
+# Demo Walkthrough
 
-## 1. 准备 demo
+This walkthrough demonstrates the local `v2.0.1-dev` ResearchAgent workspace. It uses mock/offline defaults and does not claim real scientific findings, verified references, statistical significance, or publication readiness.
+
+## 1. Prepare The Demo Workspace
 
 ```bash
 python scripts/reset_demo.py --yes
+python scripts/seed_demo.py
 ```
 
-该命令只重置 `projects/demo_project`。
+The demo project is written under `projects/demo_project`, which is ignored by git.
 
-## 2. 启动服务
+## 2. Run The Local Workflow
 
-后端：
+```bash
+python scripts/run_demo.py
+```
+
+Expected artifact groups include:
+
+- literature index and local RAG records
+- analysis summaries and provenance
+- figure provenance
+- evidence and claim alignment records
+- manuscript draft/refinement artifacts
+- reviewer and revision records
+- audit log and run history
+
+These outputs are local demo artifacts and must not be presented as real research conclusions.
+
+## 3. Start The Apps
+
+Backend:
 
 ```bash
 cd services/api
 python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-前端：
+Frontend:
 
 ```bash
 cd apps/web
 npm run dev -- --hostname 127.0.0.1 --port 3100
 ```
 
-打开 `http://127.0.0.1:3100`。
+Open `http://127.0.0.1:3100`.
 
-## 3. 演示主路径
+## 4. Review The Command Center
 
-1. 查看首页 `Local MVP Overview`。
-2. 点击 `Global Trust Dashboard`，查看 trust scores、blocking issues、failed run diagnostics。
-3. 点击 `Release Readiness`，查看 local MVP checks 和 production gaps。
-4. 点击 `Project Export`，生成本地 zip。
-5. 点击 `Validate Local MVP`，页面会提示本地命令：`python scripts/validate_v1.py`。
+The homepage now starts with the ResearchAgent Command Center:
 
-## 4. 命令行导出
+1. Project Setup
+2. Knowledge & Evidence Index
+3. Research & Analysis
+4. Manuscript & Review Loop
+5. Export & Trust Report
 
-```bash
-python scripts/export_project_zip.py --project-id demo_project
-```
+The older detailed panels remain available under Advanced / Diagnostics so existing audit tools are not removed.
 
-成功后会输出类似：
-
-```text
-Project export created: exports/researchagent_demo_project_local_mvp_export_YYYYMMDDTHHMMSSZ.zip
-```
-
-## 5. 验收
+## 5. Validate
 
 ```bash
-python scripts/validate_v1.py
+python -m pytest services/api/tests -q
+python scripts/validate_v2.py
+cd apps/web && npm run typecheck
+cd apps/web && npm run build
 ```
 
-通过时输出：
+## 6. Package A Release Candidate
 
-```text
-ResearchAgent v1.0 Local MVP validation passed.
+```bash
+python scripts/package_release.py --version v2.0.1-dev --output-dir dist
 ```
+
+Review `dist/researchagent-v2.0.1-dev-source.zip` and `dist/researchagent-v2.0.1-dev-evidence.zip`. Source packages should not include runtime projects, caches, local databases, `.env*`, Node build output, or Playwright reports.

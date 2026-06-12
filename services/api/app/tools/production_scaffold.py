@@ -84,7 +84,7 @@ def get_production_scaffold_report() -> dict[str, Any]:
     ]
 
     return {
-        "version": "v2.0",
+        "version": "v2.0.1-dev",
         "name": "Research Workspace scaffold",
         "generated_at": _utc_now(),
         "environment": settings.app_env,

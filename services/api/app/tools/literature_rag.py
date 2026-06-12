@@ -379,8 +379,12 @@ def ask_literature_rag(
         "source_passages": source_passages,
         "unsupported_notes": parsed.get("unsupported_notes") if source_passages else unsupported_notes,
         "limitations": parsed.get("limitations", fallback["limitations"]),
+        "retrieval_mode": retrieval_mode,
+        "llm_mode": response.mode,
+        "prompt_version": response.prompt_version,
+        "source_passage_count": len(source_passages),
         "retrieval": {
-            "mode": "local_keyword",
+            "mode": retrieval_mode,
             "retrieval_mode": retrieval_mode,
             "top_k": top_k,
             "returned": len(source_passages),

@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      LLM_MODE: mock
+      LLM_API_KEY: ""
+      DATABASE_BACKEND: sqlite
+      QUEUE_MODE: inline
+      AUTH_MODE: disabled
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install backend
+        run: python -m pip install -e services/api
+      - name: Compile Python
+        run: python -m compileall services/api scripts
+      - name: Test backend
+        run: python -m pytest services/api/tests -q
+      - name: Validate v2 scaffold
+        run: python scripts/validate_v2.py
+
+  frontend:
+    runs-on: ubuntu-latest
+    env:
+      LLM_MODE: mock
+      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install frontend
+        working-directory: apps/web
+        run: npm ci
+      - name: Typecheck
+        working-directory: apps/web
+        run: npm run typecheck
+      - name: Build
+        working-directory: apps/web
+        run: npm run build
+      - name: Install Playwright Chromium
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+      - name: Playwright
+        working-directory: apps/web
+        run: npx playwright test --project=chromium
+
+  security-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Static secret scan
+        run: python scripts/check_secrets_static.py
