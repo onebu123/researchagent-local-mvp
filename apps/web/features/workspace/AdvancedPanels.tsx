@@ -1,6 +1,7 @@
 "use client";
 
 import LegacyWorkspace from "./LegacyWorkspace";
+import { IterativeAgentLoopPanel } from "@/components/IterativeAgentLoopPanel";
 
 export function AdvancedPanels() {
   return (
@@ -13,6 +14,7 @@ export function AdvancedPanels() {
             The full legacy workspace remains available below while the command center becomes the primary entry point.
           </p>
         </div>
+        <IterativeAgentLoopPanel />
       </div>
       <LegacyWorkspace />
     </section>

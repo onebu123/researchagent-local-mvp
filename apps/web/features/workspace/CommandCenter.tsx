@@ -17,14 +17,14 @@ export function CommandCenter({ signals }: { signals: WorkspaceSignal[] }) {
         <div className="max-w-3xl">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-sm text-slate-200">
             <Activity className="h-4 w-4" aria-hidden="true" />
-            ResearchAgent Command Center
+            ResearchAgent Auto Scientist
           </div>
           <h1 className="text-4xl font-semibold tracking-normal text-white sm:text-5xl">
-            All-in-one Research Agent Workspace
+            AI-Scientist-style Research Workspace
           </h1>
           <p className="mt-5 text-base leading-7 text-slate-300">
-            Literature ingestion, evidence indexing, data analysis, evidence-grounded drafting, claim verification,
-            reviewer simulation, revision planning, and exportable audit packages in one auditable workspace.
+            Generate ideas, run sandboxed local experiments, write auditable manuscripts, simulate reviewers,
+            and export trust packages while keeping generated code and scientific claims under human review.
           </p>
         </div>
         <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:w-[420px]">

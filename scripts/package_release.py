@@ -12,7 +12,7 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_VERSION = "v2.0.1-dev"
+DEFAULT_VERSION = "v3.0.0-rc1"
 
 REQUIRED_ROOT_FILES = [
     "README.md",
@@ -60,7 +60,7 @@ def utc_now() -> str:
 
 def validate_version(version: str) -> str:
     if not re.fullmatch(r"v\d+\.\d+\.\d+(?:[-.][A-Za-z0-9_.-]+)?", version):
-        raise ValueError("version must look like v2.0.1-dev")
+        raise ValueError("version must look like v3.0.0-rc1")
     return version
 
 

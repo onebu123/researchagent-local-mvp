@@ -1,59 +1,58 @@
-# All-in-one Agent Architecture
+# Agent Architecture
 
-ResearchAgent is organized around a local user workspace, explicit artifacts, and auditable agent responsibilities. The current implementation is still local-first and mock-by-default; this document describes the intended skeleton and extension boundaries.
+ResearchAgent is moving toward an all-in-one research agent workspace, but the current implementation remains local-first and mock-by-default. This document describes the intended agent responsibilities and the current safety boundary.
+
+## Target Flow
 
 ```mermaid
-flowchart TD
-  Workspace["User Workspace"] --> Literature["Literature Ingestion"]
-  Literature --> Index["Knowledge Index / RAG"]
+flowchart LR
+  Workspace["User Workspace"] --> Ingestion["Literature Ingestion"]
+  Ingestion --> Index["Knowledge Index / RAG"]
   Workspace --> Data["Data Analysis"]
   Data --> Figures["Figure Generation"]
-  Index --> Generator["Manuscript Generator"]
-  Data --> Generator
-  Figures --> Generator
-  Generator --> Reviewers["Reviewer Agents"]
-  Reviewers --> Planner["Revision Planner"]
-  Planner --> Approval["Human Approval"]
+  Index --> Draft["Manuscript Generator"]
+  Figures --> Draft
+  Draft --> Reviewers["Reviewer Agents"]
+  Reviewers --> Plan["Revision Planner"]
+  Plan --> Approval["Human Approval"]
   Approval --> Export["Export / Audit Package"]
-  Reviewers --> Audit["Audit Log / Run History"]
-  Export --> Audit
 ```
 
 ## Agent Responsibilities
 
 | Agent | Inputs | Outputs | Limits |
 | --- | --- | --- | --- |
-| Literature Ingestion | Local PDFs/text and metadata | Parsed text, parser metadata, literature index | Does not verify DOI or metadata without explicit human/provider evidence |
-| Knowledge Index / RAG | Parsed literature and chunks | Source passages, retrieval scores, unsupported notes | Offline retrieval only unless optional adapters are configured |
-| Data Analysis | Local CSV and analysis artifacts | Descriptive summaries and provenance | Does not fabricate inferential statistics or causal conclusions |
-| Figure Generation | Analysis outputs and provenance | Figure files and figure provenance | Demo figures are not experimental proof |
-| Manuscript Generator | Source passages, allowed claims, analysis summaries | Draft artifacts and generation notes | Must distinguish supported and unsupported claims |
-| Reviewer Agents | Drafts, claims, references, source passages | Blocking issues, warnings, suggested fixes | Simulated reviewers are not formal peer review |
-| Revision Planner | Reviewer issues and current drafts | Revision plans and patch suggestions | Patches must require human approval where relevant |
-| Human Approval | Revision plans and reviewed artifacts | Approved decisions and audit events | Human review is required for verified references and final claims |
-| Export / Audit Package | Project artifacts and audit log | Source package, evidence package, trust report | Packages must exclude runtime artifacts, secrets, and absolute paths |
+| Literature Ingestion | Uploaded literature and parsed text | Literature index, parser metadata | Does not verify references automatically |
+| Knowledge Index / RAG | Local source text and metadata | Chunks, answers, source passages | Offline retrieval; unsupported answers must be labeled |
+| Research Question | Topic, literature notes, evidence gaps | Candidate questions | Must not invent findings |
+| Data Analysis | Local CSV/data artifacts | Descriptive summaries and provenance | No fabricated p-values or causal conclusions |
+| Figure Generation | Local data and analysis outputs | Figures and figure provenance | Figures must keep source-data context |
+| Manuscript Generator | Evidence, source passages, analysis, figures | Draft/readable/refined manuscript artifacts | Drafts are not scientific conclusions |
+| Evidence Reviewer | Claims, evidence ledger, source passages | Evidence issues and warnings | Cannot convert unsupported claims into verified facts |
+| Citation Reviewer | References, source passages, citation reports | Citation grounding issues | Human approval is required for verified references |
+| Statistical Reviewer | Analysis provenance and manuscript wording | Statistical overclaim warnings | Does not perform formal statistical review |
+| Safety Reviewer | Manuscript and patch text | Safety issues and blocked terms | Guards against overclaims, not full semantic proof |
+| Revision Planner | Reviewer issues and current manuscript | Patch suggestions and revision plan | Human approval is required before applying changes |
+| Export Agent | Project artifacts and audit data | Source/evidence/workspace packages | Exports are audit handoff artifacts, not certificates |
 
-## Mock/Offline vs Live LLM
+## Current Implementation
 
-- Mock/offline mode is the default and must be deterministic enough for tests.
-- Live LLM mode is optional and must be explicitly configured outside tests.
-- Feature code should use the configured LLM client rather than forcing mock mode.
-- Live output still needs evidence grounding, limitations, and audit records.
-- A future optional LangGraph adapter may orchestrate agents, but LangGraph is not a required dependency.
+Current backend agents live in `services/api/app/agents/` and are orchestrated by `services/api/app/workflows/research_workflow.py`. The workflow is still mostly linear. Some target roles are represented by tools or panels rather than dedicated agent classes.
 
-## Artifact Contract
+Implemented local capabilities include literature indexing, offline RAG, CSV profiling, plotting, evidence ledger generation, manuscript drafting/refinement, claim alignment, reviewer reports, manuscript safety checks, patch planning, audit logs, run history, and export packaging.
 
-Agent outputs should be written under project-relative paths such as:
+Still planned: a clearer `agent_core` contract layer, durable multi-round Generator → Reviewer → Reviser orchestration, stronger RAG evaluation, and richer human approval workflows.
 
-```text
-agent/agent_plan.json
-agent/research_loop_runs.jsonl
-agent/reviewer_rounds.jsonl
-agent/revision_plan.json
-literature/rag/chunks.jsonl
-literature/rag/rag_answers.jsonl
-manuscript/draft.md
-exports/
-```
+## Mock/Offline Vs Live LLM
 
-Generated records should include the producing step, input artifact references, output artifact references, timestamp, limitations, and whether human approval is required.
+- `LLM_MODE=mock` is the default and is used by tests and demos.
+- Live LLM mode is optional and must be configured locally.
+- Tests must not require real API keys or external networks.
+- Live output must still preserve evidence, provenance, limitations, and audit context.
+
+## Non-Goals
+
+- No production-ready claim.
+- No peer-review-ready claim.
+- No compliance-ready claim.
+- No fabricated DOI, authors, years, journals, pages, p-values, significance, causality, or experimental conclusions.

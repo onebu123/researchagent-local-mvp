@@ -6,7 +6,9 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 
 from app.schemas import (
+    ClaimAuditRequest,
     ManuscriptDiffGenerateRequest,
+    RevisionPlanGenerateRequest,
     ManuscriptPatchConfirmRequest,
     ManuscriptPatchGenerateRequest,
     ManuscriptPatchItemEditRequest,
@@ -42,6 +44,8 @@ from app.tools.patch_merge import (
     load_patch_merge,
 )
 from app.tools.version_lineage import generate_version_lineage
+from app.tools.claim_audit import read_claim_audit, run_draft_claim_audit
+from app.tools.revision_plan import generate_evidence_revision_plan, read_revision_plan
 from app.tools.revision_line_diff import (
     generate_revision_line_diff,
     list_revision_line_diffs,
@@ -79,6 +83,61 @@ def _assert_source_inside(project_id: str, project_dir: Path, source_manuscript:
         storage_service.ensure_inside_project(project_id, project_dir / source_manuscript)
     except InvalidUploadError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/projects/{project_id}/manuscript/claim-audit")
+def create_claim_audit(
+    project_id: str,
+    payload: ClaimAuditRequest | None = None,
+) -> dict[str, Any]:
+    project_dir = _project_dir(project_id)
+    request_payload = payload or ClaimAuditRequest()
+    _assert_source_inside(project_id, project_dir, request_payload.manuscript_relative_path)
+    try:
+        return run_draft_claim_audit(
+            project_dir,
+            project_id,
+            manuscript_text=request_payload.manuscript_text,
+            manuscript_relative_path=request_payload.manuscript_relative_path,
+            retrieval_mode=request_payload.retrieval_mode,
+            top_k=request_payload.top_k,
+        )
+    except Exception as exc:
+        raise _handle_tool_error(exc) from exc
+
+
+@router.get("/projects/{project_id}/manuscript/claim-audit")
+def get_claim_audit(project_id: str) -> dict[str, Any]:
+    payload = read_claim_audit(_project_dir(project_id))
+    if not payload:
+        raise HTTPException(status_code=404, detail="provenance/claim_audit.json does not exist")
+    return payload
+
+
+@router.post("/projects/{project_id}/manuscript/revision-plan")
+def create_revision_plan(
+    project_id: str,
+    payload: RevisionPlanGenerateRequest | None = None,
+) -> dict[str, Any]:
+    project_dir = _project_dir(project_id)
+    request_payload = payload or RevisionPlanGenerateRequest()
+    _assert_source_inside(project_id, project_dir, request_payload.manuscript_relative_path)
+    try:
+        return generate_evidence_revision_plan(
+            project_dir,
+            project_id,
+            manuscript_relative_path=request_payload.manuscript_relative_path,
+        )
+    except Exception as exc:
+        raise _handle_tool_error(exc) from exc
+
+
+@router.get("/projects/{project_id}/manuscript/revision-plan")
+def get_revision_plan(project_id: str) -> dict[str, Any]:
+    payload = read_revision_plan(_project_dir(project_id))
+    if not payload:
+        raise HTTPException(status_code=404, detail="manuscript/revision_plan.json does not exist")
+    return payload
 
 
 @router.post("/projects/{project_id}/manuscript/patches/generate")

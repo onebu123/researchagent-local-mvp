@@ -19,7 +19,7 @@ ResearchAgent is a local-first research agent workspace. It is designed for audi
 
 ## Deployment Scaffold Limits
 
-ResearchAgent v2.0 added a Research Workspace scaffold. In the current `v2.0.1-dev` repository, optional PostgreSQL, Redis, auth, Docker, and worker settings are planning aids for local validation.
+ResearchAgent v2.0 added a Research Workspace scaffold. In the current `v3.0.0-rc1` repository, optional PostgreSQL, Redis, auth, Docker, and worker settings are planning aids for local validation.
 
 Defaults remain:
 

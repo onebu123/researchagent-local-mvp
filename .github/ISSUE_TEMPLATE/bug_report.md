@@ -18,12 +18,25 @@ labels: bug
 ## Actual Behavior
 
 
+## Environment
+
+- ResearchAgent version:
+- OS:
+- Python version:
+- Node version:
+- `LLM_MODE`:
+- Browser, if UI-related:
+
 ## Validation Context
 
-- `LLM_MODE`:
 - Backend command:
 - Frontend command:
+- `python scripts/verify_local.py` result:
 
-## Safety / Evidence Impact
+## Evidence / Safety Impact
 
-Describe whether the issue affects provenance, citation grounding, claim safety, export packaging, or mock/demo labeling.
+Does this affect provenance, RAG source passages, claim safety, citation grounding, reviewer issues, revision approval, export packaging, mock/demo labeling, or secret handling?
+
+## Additional Context
+
+Do not paste secrets, API keys, private keys, local absolute paths, or confidential research data.

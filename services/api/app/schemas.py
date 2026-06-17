@@ -569,7 +569,12 @@ class LLMTestRequest(BaseModel):
 class LiteratureRAGAskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     top_k: int = Field(default=5, ge=1, le=10)
-    retrieval_mode: Literal["local_hybrid", "local_keyword"] = "local_hybrid"
+    retrieval_mode: Literal[
+        "local_hybrid",
+        "local_keyword",
+        "local_fts",
+        "local_hybrid_fts",
+    ] = "local_hybrid"
 
     @field_validator("question")
     @classmethod
@@ -610,6 +615,334 @@ class ReferenceApprovalRequest(BaseModel):
     decision: Literal["approved", "rejected", "needs_manual_check"]
     reason: str | None = Field(default="", max_length=1000)
     apply_to_literature_index: bool = False
+
+    @field_validator("reason")
+    @classmethod
+    def validate_reason(cls, value: str | None) -> str:
+        return (value or "").strip()
+
+class ClaimAuditRequest(BaseModel):
+    manuscript_text: str | None = Field(default=None, max_length=200000)
+    manuscript_relative_path: str = Field(default="manuscript/draft.md", max_length=240)
+    retrieval_mode: Literal[
+        "local_hybrid",
+        "local_keyword",
+        "local_fts",
+        "local_hybrid_fts",
+    ] = "local_hybrid_fts"
+    top_k: int = Field(default=5, ge=1, le=10)
+
+    @field_validator("manuscript_relative_path")
+    @classmethod
+    def validate_manuscript_relative_path(cls, value: str) -> str:
+        cleaned = value.strip().replace("\\", "/")
+        if not cleaned:
+            raise ValueError("manuscript_relative_path must not be empty")
+        if cleaned.startswith("/") or ".." in cleaned.split("/"):
+            raise ValueError("manuscript_relative_path must stay inside project")
+        if not cleaned.startswith("manuscript/") or not cleaned.endswith(".md"):
+            raise ValueError("manuscript_relative_path must be a markdown file under manuscript")
+        return cleaned
+
+
+class RevisionPlanGenerateRequest(BaseModel):
+    manuscript_relative_path: str = Field(default="manuscript/draft.md", max_length=240)
+
+    @field_validator("manuscript_relative_path")
+    @classmethod
+    def validate_manuscript_relative_path(cls, value: str) -> str:
+        cleaned = value.strip().replace("\\", "/")
+        if not cleaned:
+            raise ValueError("manuscript_relative_path must not be empty")
+        if cleaned.startswith("/") or ".." in cleaned.split("/"):
+            raise ValueError("manuscript_relative_path must stay inside project")
+        if not cleaned.startswith("manuscript/") or not cleaned.endswith(".md"):
+            raise ValueError("manuscript_relative_path must be a markdown file under manuscript")
+        return cleaned
+
+
+RetrievalMode = Literal[
+    "local_hybrid",
+    "local_keyword",
+    "local_fts",
+    "local_hybrid_fts",
+]
+
+
+class PaperWriterPlanRequest(BaseModel):
+    paper_type: Literal["research_article", "literature_review", "short_paper", "technical_report"] = "research_article"
+    topic: str | None = Field(default=None, max_length=240)
+    research_question: str | None = Field(default=None, max_length=1000)
+    retrieval_mode: RetrievalMode = "local_hybrid_fts"
+
+    @field_validator("topic", "research_question")
+    @classmethod
+    def validate_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class PaperWriterOutlineRequest(BaseModel):
+    retrieval_mode: RetrievalMode = "local_hybrid_fts"
+
+
+class PaperWriterDraftRequest(BaseModel):
+    retrieval_mode: RetrievalMode = "local_hybrid_fts"
+    run_claim_audit_after: bool = True
+
+
+class PaperWriterLatexExportRequest(BaseModel):
+    compile_pdf: bool = False
+
+
+class AutoScientistIdeaRequest(BaseModel):
+    topic: str | None = Field(default=None, max_length=240)
+    research_question: str | None = Field(default=None, max_length=1000)
+    max_ideas: int = Field(default=3, ge=1, le=6)
+
+    @field_validator("topic", "research_question")
+    @classmethod
+    def validate_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class AutoScientistRunRequest(BaseModel):
+    topic: str | None = Field(default=None, max_length=240)
+    research_question: str | None = Field(default=None, max_length=1000)
+    max_ideas: int = Field(default=3, ge=1, le=6)
+    max_experiments_per_idea: int = Field(default=2, ge=1, le=5)
+    paper_type: Literal["research_article", "literature_review", "short_paper", "technical_report"] = "research_article"
+    retrieval_mode: RetrievalMode = "local_hybrid_fts"
+    write_paper: bool = True
+    export_latex: bool = True
+    allow_generated_code_experiments: bool = False
+    generated_code_timeout_seconds: int = Field(default=5, ge=1, le=30)
+    generated_code_max_memory_mb: int = Field(default=512, ge=64, le=2048)
+    generated_code_sandbox_mode: Literal["subprocess", "docker"] = "subprocess"
+    generated_code_docker_image: str | None = Field(default=None, max_length=120)
+    generated_code_source_mode: Literal["deterministic", "mock_llm", "live_llm"] = "deterministic"
+    generated_code_strategy: Literal["lexical_diagnostics", "retrieval_ablation", "claim_support_matrix", "descriptive_table_profile"] = "lexical_diagnostics"
+    generated_code_requires_approval: bool | None = None
+    generated_code_approved: bool = False
+    enable_generated_code_revision_loop: bool = False
+    generated_code_revision_rounds: int = Field(default=1, ge=0, le=3)
+    enable_experiment_tree_search: bool = False
+    experiment_tree_max_depth: int = Field(default=1, ge=0, le=3)
+    experiment_tree_branching_factor: int = Field(default=2, ge=1, le=4)
+
+    @field_validator("topic", "research_question", "generated_code_docker_image")
+    @classmethod
+    def validate_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class AutoScientistGeneratedCodeApprovalRequest(BaseModel):
+    run_id: str = Field(max_length=160)
+    experiment_id: str = Field(max_length=240)
+    source_hash: str | None = Field(default=None, max_length=128)
+    decision: Literal["approved", "rejected"]
+    reason: str | None = Field(default="", max_length=1000)
+
+    @field_validator("run_id", "experiment_id", "source_hash", "reason")
+    @classmethod
+    def validate_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class AutoScientistGeneratedCodeRerunRequest(BaseModel):
+    run_id: str = Field(max_length=160)
+    experiment_id: str = Field(max_length=240)
+    source_hash: str = Field(max_length=128)
+    sandbox_mode: Literal["subprocess", "docker"] = "subprocess"
+    docker_image: str | None = Field(default=None, max_length=120)
+    timeout_seconds: int = Field(default=5, ge=1, le=30)
+    max_memory_mb: int = Field(default=512, ge=64, le=2048)
+
+    @field_validator("run_id", "experiment_id", "source_hash", "docker_image")
+    @classmethod
+    def validate_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class AutoScientistExperimentTreeSelectRequest(BaseModel):
+    node_id: str = Field(max_length=240)
+    reason: str | None = Field(default="", max_length=1000)
+
+    @field_validator("node_id", "reason")
+    @classmethod
+    def validate_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class AutoScientistExperimentTreeRerunRequest(BaseModel):
+    node_id: str = Field(max_length=240)
+    sandbox_mode: Literal["subprocess", "docker"] = "subprocess"
+    docker_image: str | None = Field(default=None, max_length=120)
+    timeout_seconds: int = Field(default=5, ge=1, le=30)
+    max_memory_mb: int = Field(default=512, ge=64, le=2048)
+
+    @field_validator("node_id", "docker_image")
+    @classmethod
+    def validate_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class AutoScientistPaperRewriteRequest(BaseModel):
+    node_id: str | None = Field(default=None, max_length=240)
+    reason: str | None = Field(default="", max_length=1000)
+
+    @field_validator("node_id", "reason")
+    @classmethod
+    def validate_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class AutoScientistTreeRevisionPlanRequest(BaseModel):
+    node_id: str | None = Field(default=None, max_length=240)
+    reason: str | None = Field(default="", max_length=1000)
+
+    @field_validator("node_id", "reason")
+    @classmethod
+    def validate_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class AutoScientistTreeRevisionApplyRequest(BaseModel):
+    patch_ids: list[str] | None = None
+    reason: str | None = Field(default="", max_length=1000)
+    require_human_approval: bool = True
+    rerun_claim_audit: bool = True
+    regenerate_trust_package: bool = True
+
+    @field_validator("patch_ids")
+    @classmethod
+    def validate_patch_ids(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        cleaned = [item.strip() for item in value if isinstance(item, str) and item.strip()]
+        if not cleaned:
+            return None
+        if len(cleaned) != len(set(cleaned)):
+            raise ValueError("patch_ids must be unique")
+        for item in cleaned:
+            if not item.startswith("tree_revision_patch_"):
+                raise ValueError("patch_ids must start with tree_revision_patch_")
+        return cleaned
+
+    @field_validator("reason")
+    @classmethod
+    def validate_reason(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class AutoScientistExperimentClaimBindingRequest(BaseModel):
+    manuscript_relative_path: str | None = Field(default=None, max_length=240)
+    node_id: str | None = Field(default=None, max_length=240)
+    reason: str | None = Field(default="", max_length=1000)
+    top_k: int = Field(default=3, ge=1, le=10)
+
+    @field_validator("manuscript_relative_path")
+    @classmethod
+    def validate_manuscript_relative_path(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip().replace("\\", "/")
+        if not cleaned:
+            return None
+        if cleaned.startswith("/") or ".." in cleaned.split("/"):
+            raise ValueError("manuscript_relative_path must stay inside project")
+        if not cleaned.startswith("manuscript/") or not cleaned.endswith(".md"):
+            raise ValueError("manuscript_relative_path must be a Markdown file under manuscript/")
+        return cleaned
+
+    @field_validator("node_id", "reason")
+    @classmethod
+    def validate_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class AutoScientistPaperCitationBindingRequest(BaseModel):
+    manuscript_relative_path: str | None = Field(default=None, max_length=240)
+    retrieval_mode: str = Field(default="local_hybrid_fts", max_length=80)
+    top_k: int = Field(default=3, ge=1, le=10)
+
+    @field_validator("manuscript_relative_path")
+    @classmethod
+    def validate_manuscript_relative_path(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip().replace("\\", "/")
+        if not cleaned:
+            return None
+        if cleaned.startswith("/") or ".." in cleaned.split("/"):
+            raise ValueError("manuscript_relative_path must stay inside project")
+        if not cleaned.startswith("manuscript/") or not cleaned.endswith(".md"):
+            raise ValueError("manuscript_relative_path must be a Markdown file under manuscript/")
+        return cleaned
+
+    @field_validator("retrieval_mode")
+    @classmethod
+    def validate_retrieval_mode(cls, value: str) -> str:
+        cleaned = value.strip()
+        return cleaned or "local_hybrid_fts"
+
+
+class AutoScientistPaperCompileRequest(BaseModel):
+    manuscript_tex_relative_path: str | None = Field(default=None, max_length=240)
+    engine: Literal["auto", "pdflatex", "tectonic", "none"] = "auto"
+    timeout_seconds: int = Field(default=30, ge=1, le=120)
+    generate_preview_pdf: bool = True
+
+    @field_validator("manuscript_tex_relative_path")
+    @classmethod
+    def validate_manuscript_tex_relative_path(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip().replace("\\", "/")
+        if not cleaned:
+            return None
+        if cleaned.startswith("/") or ".." in cleaned.split("/"):
+            raise ValueError("manuscript_tex_relative_path must stay inside project")
+        if not cleaned.startswith("manuscript/") or not cleaned.endswith(".tex"):
+            raise ValueError("manuscript_tex_relative_path must be a .tex file under manuscript/")
+        return cleaned
+
+
+class HumanReviewDecisionRequest(BaseModel):
+    decision: Literal["approved", "rejected", "edited", "dismissed"]
+    reason: str | None = Field(default="", max_length=1000)
 
     @field_validator("reason")
     @classmethod

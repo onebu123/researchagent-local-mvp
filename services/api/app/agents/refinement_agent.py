@@ -27,6 +27,7 @@ class RefinementAgent(BaseAgent):
             ],
         }
         state.refined_manuscript = refined
+        self.save_output(state, "manuscript/readable.md", refined, "manuscript", "Readable manuscript draft")
         self.save_output(state, "manuscript/refined.md", refined, "manuscript", "润色版论文草稿")
         self.save_output(
             state,

@@ -1,77 +1,88 @@
 # Demo Walkthrough
 
-This walkthrough demonstrates the local `v2.0.1-dev` ResearchAgent workspace. It uses mock/offline defaults and does not claim real scientific findings, verified references, statistical significance, or publication readiness.
+This walkthrough demonstrates the local `v3.0.0-rc1` ResearchAgent workspace. It uses mock/offline defaults and placeholder literature. It does not claim real scientific findings, verified references, statistical significance, or publication readiness.
 
-## 1. Prepare The Demo Workspace
+## Reset And Run
 
 ```bash
 python scripts/reset_demo.py --yes
 python scripts/seed_demo.py
-```
-
-The demo project is written under `projects/demo_project`, which is ignored by git.
-
-## 2. Run The Local Workflow
-
-```bash
 python scripts/run_demo.py
 ```
 
-Expected artifact groups include:
+`run_demo.py` seeds a local demo project, runs the workflow, builds local RAG artifacts, asks one RAG question, generates source-passage evidence, runs mock metadata/reference checks, and creates citation reports.
 
-- literature index and local RAG records
-- analysis summaries and provenance
-- figure provenance
-- evidence and claim alignment records
-- manuscript draft/refinement artifacts
-- reviewer and revision records
-- audit log and run history
+## Expected Artifact Areas
 
-These outputs are local demo artifacts and must not be presented as real research conclusions.
+```text
+projects/demo_project/
+  literature/
+  literature/rag/
+  analysis/
+  figures/
+  provenance/
+  manuscript/
+  reviews/
+  runs/
+  llm/
+```
 
-## 3. Start The Apps
+Important files include:
 
-Backend:
+- `literature/literature_index.json`
+- `literature/rag/chunks.jsonl`
+- `literature/rag/rag_answers.jsonl`
+- `analysis/result_summary.json`
+- `analysis/analysis_provenance.json`
+- `figures/figure_provenance.json`
+- `provenance/evidence.json`
+- `provenance/claim_alignment.json`
+- `manuscript/draft.md`
+- `manuscript/readable.md`
+- `manuscript/refined.md`
+- `reviews/review_report.json`
+- `runs/run_history.json`
+
+## Local Verification
+
+For the full local check, run:
+
+```bash
+python scripts/verify_local.py
+```
+
+The verifier writes:
+
+- `reports/verification_report.json`
+- `reports/verification_report.md`
+
+The report records command results, artifact existence, JSON parsing, review report checks, RAG provenance checks, safety scans, release package checks, known limitations, and final status.
+
+## Web Demo
+
+Start the API and web app:
 
 ```bash
 cd services/api
 python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Frontend:
-
 ```bash
 cd apps/web
 npm run dev -- --hostname 127.0.0.1 --port 3100
 ```
 
-Open `http://127.0.0.1:3100`.
+Open `http://127.0.0.1:3100`. The first screen is the ResearchAgent Command Center.
 
-## 4. Review The Command Center
-
-The homepage now starts with the ResearchAgent Command Center:
-
-1. Project Setup
-2. Knowledge & Evidence Index
-3. Research & Analysis
-4. Manuscript & Review Loop
-5. Export & Trust Report
-
-The older detailed panels remain available under Advanced / Diagnostics so existing audit tools are not removed.
-
-## 5. Validate
+## Release Package Demo
 
 ```bash
-python -m pytest services/api/tests -q
-python scripts/validate_v2.py
-cd apps/web && npm run typecheck
-cd apps/web && npm run build
+python scripts/package_release.py --version v3.0.0-rc1 --output-dir dist
 ```
 
-## 6. Package A Release Candidate
+Review:
 
-```bash
-python scripts/package_release.py --version v2.0.1-dev --output-dir dist
-```
+- `dist/researchagent-v3.0.0-rc1-source.zip`
+- `dist/researchagent-v3.0.0-rc1-evidence.zip`
 
-Review `dist/researchagent-v2.0.1-dev-source.zip` and `dist/researchagent-v2.0.1-dev-evidence.zip`. Source packages should not include runtime projects, caches, local databases, `.env*`, Node build output, or Playwright reports.
+These packages are local audit artifacts. They are not compliance, production, or peer review certificates.

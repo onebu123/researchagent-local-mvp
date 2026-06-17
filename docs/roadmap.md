@@ -1,115 +1,79 @@
 # Roadmap
 
-The roadmap is intentionally conservative. ResearchAgent should become more useful without pretending to be a production service, peer review system, compliance product, or scientific truth oracle.
+This roadmap is intentionally conservative. ResearchAgent should become more useful without pretending to be a production service, peer review system, compliance product, publication engine, or scientific truth oracle.
 
-## v2.0.1 Quality Fix Release
-
-Goals:
-- Make repository presentation consistent and trustworthy.
-- Keep all version surfaces aligned on `v2.0.1-dev`.
-- Make release source and evidence packages reproducible.
-- Keep CI local-first and mock-by-default.
-
-Deliverables:
-- Clean README, docs index, architecture docs, and product vision.
-- Source/evidence packaging scripts with runtime artifact exclusions.
-- Static secret scanning.
-- GitHub Actions CI for backend, frontend, and static validation.
-- Command Center homepage split from legacy panels.
-
-Acceptance criteria:
-- `python -m pytest services/api/tests -q` passes locally.
-- `python scripts/validate_v2.py` passes locally.
-- `cd apps/web && npm run typecheck && npm run build` passes locally.
-- Release zips exclude projects, caches, `.env*`, test reports, and local absolute paths.
-
-Non-goals:
-- No production hosting claim.
-- No real citation verification guarantee.
-- No mandatory live LLM integration.
-
-## v2.1 Research Agent Loop
+## v3.0.0-rc1 AI-Scientist-style Release Candidate
 
 Goals:
-- Add a deterministic Generator -> Reviewer -> Reviser loop.
-- Preserve round-by-round audit records.
-- Keep human approval required for patches and final decisions.
+
+- Freeze the current AI-Scientist-style local workflow into a verifiable release candidate.
+- Align backend, frontend, docs, package metadata, release scripts, and validation scripts on `v3.0.0-rc1`.
+- Make the end-to-end local demo the primary release-readiness contract.
+- Preserve mock/offline defaults, generated-code safety gates, human approval requirements, and audit-package exports.
 
 Deliverables:
-- Draft round artifacts.
-- Reviewer round JSONL records.
-- Revision plan artifacts.
-- API and UI panels for iterative loop status.
+
+- Auto Scientist Workbench with Ideas, Experiments, Code Review, Paper, and Trust workflow areas.
+- Background job records, event timelines, SSE event stream, and cooperative cancellation.
+- Generated-code proposal lifecycle with static scan, source hash, optional approval gate, sandbox execution, and rerun record.
+- Experiment tree search, selected-node reruns, selected-node paper rewrites, and best-node revision planning.
+- Experiment-claim binding, paper-citation binding, LaTeX compile report, fallback preview PDF, and Evidence Trust Package export.
+- `scripts/run_auto_scientist_demo.py` end-to-end local demo.
+- `scripts/validate_v38.py` release-candidate validation contract.
+- CI matrix coverage for backend, frontend, static security, release readiness, packaging, and demo validation.
 
 Acceptance criteria:
-- Mock loop is deterministic.
-- Reviewer issues flow into revision plans.
-- Revisions do not overwrite the official draft automatically.
-- Run history and audit log are written for each round.
+
+- `python -m compileall services/api scripts` passes.
+- `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest services/api/tests -q` passes.
+- `python scripts/validate_v38.py` passes.
+- `python scripts/run_auto_scientist_demo.py ...` produces a report with all required local artifacts.
+- `python scripts/validate_v38.py --demo-report <report>` passes.
+- `python scripts/package_release.py --version v3.0.0-rc1 --output-dir <tmp>` passes.
+- `cd apps/web && npm ci && npm run typecheck && NEXT_TELEMETRY_DISABLED=1 npm run build` passes.
 
 Non-goals:
-- No automatic paper submission.
-- No claim that reviewer simulation equals peer review.
 
-## v2.2 Real Literature RAG
+- Hosted production service claim.
+- Formal peer review, citation verification guarantee, statistical validity guarantee, compliance certificate, or publication-readiness certificate.
+- External benchmark claims.
+- Unchecked arbitrary code execution.
+
+## v3.0 Final Hardening
 
 Goals:
-- Upgrade local retrieval quality while staying offline-first.
-- Add clearer parser quality and unsupported answer detection.
+
+- Stabilize the release candidate based on CI, local demo, and user feedback.
+- Reduce long-running test flakiness and make E2E browser checks repeatable.
+- Improve UI affordances for generated-code approval, experiment-tree node selection, patch approval, and trust-package download.
 
 Deliverables:
-- Hybrid keyword/BM25 or SQLite FTS retrieval.
-- Optional local embedding adapter.
-- Chunk quality and metadata trust scores.
-- Source passage citation in answers.
-- Manual eval set format and docs.
+
+- Release notes and migration notes from v2.x/v3.0.0-rc1.
+- Expanded local eval fixtures for RAG, claim audit, citation binding, and Auto Scientist safety behavior.
+- Optional Docker sandbox smoke test documentation for machines with local approved images.
+- More explicit frontend error states, empty states, and job progress states.
 
 Acceptance criteria:
-- RAG answers cite retrieved source passages.
-- Unsupported questions return explicit unsupported notes.
-- Low-quality parser fallback is not marked as verified evidence.
+
+- CI runs consistently within target time.
+- End-to-end demo report remains stable.
+- Trust package manifest includes all Auto Scientist job, code, experiment tree, claim binding, citation binding, compile, review, and revision artifacts.
+- Demo and documentation keep limitations visible.
 
 Non-goals:
-- No external embedding API dependency.
-- No online DOI lookup requirement.
 
-## v2.3 Evaluation Benchmarks
+- Real scientific discovery certification.
+- Hosted multi-tenant deployment.
+- Automatic paper submission.
 
-Goals:
-- Add repeatable local evaluation sets and regression reports.
-- Make retrieval/drafting/audit changes easier to review.
+## Future v3.x Directions
 
-Deliverables:
-- Manual evaluation examples.
-- Local benchmark runner.
-- Versioned reports for retrieval and unsupported-answer behavior.
+Potential future work after v3.0 final:
 
-Acceptance criteria:
-- Evaluation can run offline.
-- Reports distinguish demo fixtures from real datasets.
-- Metrics are not presented as external benchmark results.
-
-Non-goals:
-- No fabricated leaderboard claims.
-- No claim of general scientific correctness.
-
-## v3.0 All-in-one Research Agent Workspace
-
-Goals:
-- Integrate the command center, agent orchestration, RAG, analysis, manuscript loop, review, revision, and export workflows.
-- Provide a coherent research audit package for handoff and review.
-
-Deliverables:
-- Stable agent contracts.
-- Stronger tool registry.
-- Richer trust dashboard.
-- Exportable audit package with source, evidence, and review provenance.
-
-Acceptance criteria:
-- End-to-end local workflow is runnable without external services.
-- Every generated claim has source/evidence status or is marked unsupported.
-- Export packages are sanitized and reproducible.
-
-Non-goals:
-- No production-ready, compliance-ready, or peer-review-ready claim.
-- No replacement for human research judgment.
+- Stronger local sandboxing and optional Docker/GPU runner management.
+- Larger local evaluation suites and regression thresholds.
+- More robust PDF parsing, OCR integration, and source locator quality reporting.
+- Better generated-code repair loops with stricter approval gates.
+- Full UI workflows for trust-package review, patch application, and paper version comparison.
+- Optional live LLM synthesis as a strictly grounded layer, never as a source of evidence.

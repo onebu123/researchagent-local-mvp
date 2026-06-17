@@ -161,7 +161,7 @@ def collect_release_evidence(version: str, output_dir: Path) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Collect ResearchAgent release evidence.")
-    parser.add_argument("--version", default="v2.0.1-dev")
+    parser.add_argument("--version", default="v3.0.0-rc1")
     parser.add_argument("--output-dir", default="dist")
     args = parser.parse_args(argv)
     return collect_release_evidence(args.version, ROOT / args.output_dir)

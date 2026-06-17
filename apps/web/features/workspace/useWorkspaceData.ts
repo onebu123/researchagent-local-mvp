@@ -16,44 +16,44 @@ export function useWorkspaceData(): {
 } {
   return {
     signals: [
-      { label: "Runtime", value: "Demo Mode / Mock Mode", tone: "warn" },
-      { label: "LLM", value: "LLM_MODE=mock by default", tone: "neutral" },
-      { label: "Version", value: "v2.0.1-dev", tone: "good" },
-      { label: "Trust", value: "Evidence required", tone: "good" }
+      { label: "Runtime", value: "Local / Mock-safe", tone: "warn" },
+      { label: "Generated code", value: "Approval-gated", tone: "warn" },
+      { label: "Version", value: "v3.0.0-rc1", tone: "good" },
+      { label: "Trust", value: "Human review required", tone: "good" }
     ],
     stages: [
       {
-        title: "Project Setup",
-        summary: "Upload literature, data, figures, and manuscript drafts; inspect project health before running agent steps.",
-        outputs: ["project health", "uploaded artifacts", "workspace status"],
+        title: "Research Brief & Evidence",
+        summary: "Define the research question, upload local literature/data, and keep source quality visible before automation.",
+        outputs: ["research brief", "local evidence", "workspace status"],
         status: "ready",
         icon: FileText
       },
       {
-        title: "Knowledge & Evidence Index",
-        summary: "Parse PDFs/text, build local literature index, RAG chunks, metadata status, and source passages.",
-        outputs: ["PDF parse", "RAG chunks", "source passages"],
+        title: "Idea Generation",
+        summary: "Generate candidate research ideas and experiment plans from project-local evidence and explicit limitations.",
+        outputs: ["ideas.json", "experiment_plan.json", "limitations"],
         status: "mock",
         icon: BookOpenCheck
       },
       {
-        title: "Research & Analysis",
-        summary: "Generate topic ideas, profile datasets, run descriptive analysis helpers, and track figure provenance.",
-        outputs: ["analysis summary", "statistical assistant", "figure provenance"],
+        title: "Sandboxed Experiments",
+        summary: "Run registered templates or approval-gated generated-code diagnostics in subprocess or optional Docker sandbox.",
+        outputs: ["sandbox outputs", "experiment tree", "code review rounds"],
         status: "needs-review",
         icon: FlaskConical
       },
       {
-        title: "Manuscript & Review Loop",
-        summary: "Draft from allowed evidence, audit claim alignment, ground citations, simulate reviewers, and plan revisions.",
-        outputs: ["draft", "reviewer issues", "revision plan"],
+        title: "Paper Writing & Review",
+        summary: "Write Markdown/LaTeX draft papers from experiment outputs, then audit claims and simulated reviewer findings.",
+        outputs: ["auto_scientist_paper.md", "reviewer issues", "revision plan"],
         status: "needs-review",
         icon: ClipboardCheck
       },
       {
-        title: "Export & Trust Report",
-        summary: "Create manuscript exports, audit packages, release readiness checks, and trust dashboards.",
-        outputs: ["source package", "evidence package", "trust report"],
+        title: "Trust Package & Approval",
+        summary: "Collect generated code proposals, job logs, human decisions, manuscripts, reviews, and trust package manifests.",
+        outputs: ["human review queue", "evidence package", "trust report"],
         status: "ready",
         icon: Archive
       }

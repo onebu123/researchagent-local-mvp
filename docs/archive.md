@@ -1,6 +1,6 @@
 # Historical Documentation Index
 
-ResearchAgent keeps historical milestone reports for auditability, but the repository homepage now focuses on the current `v2.0.1-dev` direction.
+ResearchAgent keeps historical milestone reports for auditability, but the repository homepage now focuses on the current `v3.0.0-rc1` direction.
 
 ## Legacy Acceptance Material
 

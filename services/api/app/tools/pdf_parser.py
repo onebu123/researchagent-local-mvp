@@ -68,6 +68,31 @@ def _page_record(page_number: int, text: str, warnings: list[str] | None = None)
     }
 
 
+def _attach_page_char_ranges(pages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Attach parsed-text character ranges to page records.
+
+    The parser writes one normalized text file per PDF.  These ranges are best-effort
+    locators into that parsed text and are intentionally treated as provenance hints,
+    not verified citation page numbers.
+    """
+
+    offset = 0
+    enriched: list[dict[str, Any]] = []
+    for page in pages:
+        record = dict(page)
+        char_count = int(record.get("char_count") or 0)
+        start = offset
+        end = start + char_count
+        record["char_start"] = start
+        record["char_end"] = end
+        record["position_label"] = f"page {record.get('page_number', len(enriched) + 1)}"
+        enriched.append(record)
+        # Parsed page text is joined with a newline when non-empty; reserve one
+        # separator character between page ranges so chunk overlap can map cleanly.
+        offset = end + 1
+    return enriched
+
+
 def _fallback_page_records(text: str, page_count: int) -> list[dict[str, Any]]:
     if page_count <= 0 and text:
         page_count = 1
@@ -211,6 +236,7 @@ def parse_pdf(pdf_path: Path, project_dir: Path) -> dict[str, Any]:
                 ]
                 parse_status = "failed"
 
+    pages = _attach_page_char_ranges(pages)
     write_text(parsed_text_path, text)
     char_count = len(text)
     empty_page_count = sum(
