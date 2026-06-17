@@ -262,6 +262,7 @@ export async function runAutoScientist(
     retrieval_mode?: string;
     write_paper?: boolean;
     export_latex?: boolean;
+    copilot_mode?: "off" | "advisory" | "strict";
     allow_generated_code_experiments?: boolean;
     generated_code_timeout_seconds?: number;
     generated_code_max_memory_mb?: number;

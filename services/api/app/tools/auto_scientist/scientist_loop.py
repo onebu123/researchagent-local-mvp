@@ -36,6 +36,7 @@ from app.tools.auto_scientist.scientist_reviewer import run_scientist_reviewer
 from app.tools.auto_scientist.scientist_paper import generate_auto_scientist_paper
 from app.tools.auto_scientist.paper_citation_binding import PAPER_CITATION_BINDINGS_JSON, generate_paper_citation_bindings
 from app.tools.auto_scientist.paper_compile import LATEX_COMPILE_REPORT_JSON, compile_auto_scientist_paper
+from app.tools.auto_scientist.phase_gates import PHASE_GATES_JSON, expected_phase_names, normalize_copilot_mode, write_phase_gates
 from app.tools.paper_writer.latex_export import export_draft_latex
 from app.tools.paper_writer.outline_builder import generate_paper_outline
 from app.tools.paper_writer.paper_plan import generate_paper_plan
@@ -64,6 +65,7 @@ def read_auto_scientist_status(project_id: str) -> dict[str, Any]:
         "experiment_plan": {"available": bool(read_experiment_plan(project_dir)), "relative_path": "auto_scientist/experiment_plan.json"},
         "analysis": {"available": (project_dir / ANALYSIS_JSON).exists(), "relative_path": ANALYSIS_JSON},
         "review": {"available": (project_dir / REVIEW_JSON).exists(), "relative_path": REVIEW_JSON},
+        "phase_gates": {"available": (project_dir / PHASE_GATES_JSON).exists(), "relative_path": PHASE_GATES_JSON},
         "experiment_tree": {"available": (project_dir / EXPERIMENT_TREE_JSON).exists(), "relative_path": EXPERIMENT_TREE_JSON},
         "paper_citation_bindings": {"available": (project_dir / PAPER_CITATION_BINDINGS_JSON).exists(), "relative_path": PAPER_CITATION_BINDINGS_JSON},
         "paper_compile": {"available": (project_dir / LATEX_COMPILE_REPORT_JSON).exists(), "relative_path": LATEX_COMPILE_REPORT_JSON},
@@ -73,6 +75,7 @@ def read_auto_scientist_status(project_id: str) -> dict[str, Any]:
         "sandboxed_generated_code": bool((latest if isinstance(latest, dict) else {}).get("sandboxed_generated_code")),
         "experiment_tree_search_enabled": bool((latest if isinstance(latest, dict) else {}).get("experiment_tree_search_enabled")),
         "generated_code_revision_loop_enabled": bool((latest if isinstance(latest, dict) else {}).get("generated_code_revision_loop_enabled")),
+        "copilot_mode": str((latest if isinstance(latest, dict) else {}).get("copilot_mode") or "off"),
         "limitations": SAFETY_LIMITATIONS,
     }
 
@@ -87,6 +90,7 @@ def run_auto_scientist(
     retrieval_mode: str = "local_hybrid_fts",
     write_paper: bool = True,
     export_latex: bool = True,
+    copilot_mode: str = "off",
     allow_generated_code_experiments: bool = False,
     generated_code_timeout_seconds: int = 5,
     generated_code_max_memory_mb: int = 128,
@@ -112,6 +116,111 @@ def run_auto_scientist(
         if progress_callback is not None:
             progress_callback(step, progress)
 
+    normalized_copilot_mode = normalize_copilot_mode(copilot_mode)
+    phase_names = expected_phase_names(
+        write_paper=write_paper,
+        export_latex=export_latex,
+        allow_generated_code_experiments=allow_generated_code_experiments,
+        enable_experiment_tree_search=enable_experiment_tree_search,
+    )
+
+    def phase_gate(phase: str) -> dict[str, Any]:
+        if normalized_copilot_mode == "off":
+            return {}
+        return write_phase_gates(
+            project_dir,
+            project_id,
+            mode=normalized_copilot_mode,
+            run_id=run_id,
+            expected_phases=phase_names,
+            active_phase=phase,
+        )
+
+    def awaiting_response(
+        gate_payload: dict[str, Any],
+        *,
+        ideas_payload: dict[str, Any] | None = None,
+        experiment_plan: dict[str, Any] | None = None,
+        experiment_results: list[dict[str, Any]] | None = None,
+        experiment_tree_payload: dict[str, Any] | None = None,
+        revision_payload: dict[str, Any] | None = None,
+        analysis_payload: dict[str, Any] | None = None,
+        review_payload: dict[str, Any] | None = None,
+        paper_outputs_payload: dict[str, Any] | None = None,
+        autonomous_paper_payload: dict[str, Any] | None = None,
+        experiment_bindings_payload: dict[str, Any] | None = None,
+        citation_bindings_payload: dict[str, Any] | None = None,
+        compile_payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        blocking_gate = gate_payload.get("blocking_gate") if isinstance(gate_payload, dict) else {}
+        latest = {
+            "schema_version": f"{SCHEMA_PREFIX}.run.v1",
+            "project_id": project_id,
+            "run_id": run_id,
+            "started_at": started_at,
+            "completed_at": None,
+            "status": "awaiting_human_review",
+            "mode": "safe_local_auto_scientist_mvp",
+            "copilot_mode": normalized_copilot_mode,
+            "phase_gate_file": PHASE_GATES_JSON,
+            "phase_gate_blocked_phase": blocking_gate.get("phase") if isinstance(blocking_gate, dict) else None,
+            "phase_gate_review_id": blocking_gate.get("review_id") if isinstance(blocking_gate, dict) else None,
+            "arbitrary_code_execution": False,
+            "safe_experiment_templates_only": not allow_generated_code_experiments,
+            "generated_code_experiments_enabled": allow_generated_code_experiments,
+            "sandboxed_generated_code": allow_generated_code_experiments,
+            "experiment_tree_search_enabled": enable_experiment_tree_search,
+            "ideas_file": IDEAS_JSON if ideas_payload else None,
+            "experiment_plan_file": "auto_scientist/experiment_plan.json" if experiment_plan else None,
+            "experiment_tree_file": EXPERIMENT_TREE_JSON if experiment_tree_payload else None,
+            "analysis_file": ANALYSIS_JSON if analysis_payload else None,
+            "review_file": REVIEW_JSON if review_payload else None,
+            "paper_outputs": paper_outputs_payload or {},
+            "autonomous_paper_outputs": autonomous_paper_payload or {},
+            "experiment_claim_bindings_file": EXPERIMENT_CLAIM_BINDINGS_JSON if experiment_bindings_payload and not experiment_bindings_payload.get("error") else None,
+            "paper_citation_bindings_file": PAPER_CITATION_BINDINGS_JSON if citation_bindings_payload and not citation_bindings_payload.get("error") else None,
+            "paper_compile_report_file": LATEX_COMPILE_REPORT_JSON if compile_payload and not compile_payload.get("error") else None,
+            "experiment_count": len(experiment_results or []),
+            "limitations": [
+                *SAFETY_LIMITATIONS,
+                "Strict copilot phase gates stop the run for local human review; approval is not peer review, citation verification, or scientific proof.",
+            ],
+        }
+        write_project_json(project_dir, LATEST_RUN_JSON, latest)
+        append_audit_event(
+            project_dir,
+            project_id,
+            "auto_scientist_phase_gate_blocked",
+            "Auto Scientist strict copilot phase gate is awaiting local human review.",
+            {
+                "run_id": run_id,
+                "phase": latest["phase_gate_blocked_phase"],
+                "review_id": latest["phase_gate_review_id"],
+                "copilot_mode": normalized_copilot_mode,
+            },
+            source="api",
+            event_category="review",
+            risk_level="medium",
+            entity_type="auto_scientist_phase_gate",
+            entity_id=str(latest["phase_gate_blocked_phase"] or "phase_gate"),
+        )
+        return {
+            "run": latest,
+            "ideas": ideas_payload or {},
+            "experiment_plan": experiment_plan or {},
+            "experiment_results": experiment_results or [],
+            "experiment_tree": experiment_tree_payload or {},
+            "generated_code_revision": revision_payload or {},
+            "analysis": analysis_payload or {},
+            "review": review_payload or {},
+            "autonomous_paper_outputs": autonomous_paper_payload or {},
+            "experiment_claim_bindings": experiment_bindings_payload or {},
+            "paper_citation_bindings": citation_bindings_payload or {},
+            "paper_compile": compile_payload or {},
+            "phase_gates": gate_payload,
+            "awaiting_human_review": True,
+        }
+
     checkpoint("auto scientist: generating ideas", 0.10)
     ideas = generate_scientist_ideas(
         project_dir,
@@ -122,6 +231,9 @@ def run_auto_scientist(
         research_question=research_question,
         max_ideas=max_ideas,
     )
+    gate_payload = phase_gate("ideas")
+    if gate_payload.get("blocking_gate"):
+        return awaiting_response(gate_payload, ideas_payload=ideas)
     checkpoint("auto scientist: building experiment plan", 0.20)
     plan = build_experiment_plan(
         project_dir,
@@ -139,6 +251,13 @@ def run_auto_scientist(
         generated_code_requires_approval=generated_code_requires_approval,
         generated_code_approved=generated_code_approved,
     )
+    gate_payload = phase_gate("experiment_plan")
+    if gate_payload.get("blocking_gate"):
+        return awaiting_response(gate_payload, ideas_payload=ideas, experiment_plan=plan)
+    if allow_generated_code_experiments:
+        gate_payload = phase_gate("generated_code")
+        if gate_payload.get("blocking_gate"):
+            return awaiting_response(gate_payload, ideas_payload=ideas, experiment_plan=plan)
     checkpoint("auto scientist: running experiment plan", 0.30)
     results = run_experiment_plan(project_dir, project_id, plan, run_id=run_id, progress_callback=checkpoint)
     experiment_tree: dict[str, Any] = {}
@@ -163,6 +282,15 @@ def run_auto_scientist(
         tree_results = experiment_tree.get("tree_experiment_results")
         if isinstance(tree_results, list):
             all_results.extend(item for item in tree_results if isinstance(item, dict))
+        gate_payload = phase_gate("tree_selection")
+        if gate_payload.get("blocking_gate"):
+            return awaiting_response(
+                gate_payload,
+                ideas_payload=ideas,
+                experiment_plan=plan,
+                experiment_results=all_results,
+                experiment_tree_payload=experiment_tree,
+            )
     revision_summary: dict[str, Any] = {}
     if enable_generated_code_revision_loop and allow_generated_code_experiments:
         checkpoint("auto scientist: reviewing generated-code failures", 0.62)
@@ -241,6 +369,19 @@ def run_auto_scientist(
             paper_outputs=paper_outputs,
             experiment_tree=experiment_tree,
         )
+        gate_payload = phase_gate("paper_draft")
+        if gate_payload.get("blocking_gate"):
+            return awaiting_response(
+                gate_payload,
+                ideas_payload=ideas,
+                experiment_plan=plan,
+                experiment_results=all_results,
+                experiment_tree_payload=experiment_tree,
+                revision_payload=revision_summary,
+                analysis_payload=analysis,
+                paper_outputs_payload=paper_outputs,
+                autonomous_paper_payload=autonomous_paper_outputs,
+            )
         checkpoint("auto scientist: binding manuscript claims to experiment results", 0.925)
         try:
             experiment_claim_bindings = generate_experiment_claim_bindings(
@@ -259,6 +400,21 @@ def run_auto_scientist(
             )
         except Exception as exc:
             paper_citation_bindings = {"error": exc.__class__.__name__, "binding_file": PAPER_CITATION_BINDINGS_JSON}
+        gate_payload = phase_gate("citation_binding")
+        if gate_payload.get("blocking_gate"):
+            return awaiting_response(
+                gate_payload,
+                ideas_payload=ideas,
+                experiment_plan=plan,
+                experiment_results=all_results,
+                experiment_tree_payload=experiment_tree,
+                revision_payload=revision_summary,
+                analysis_payload=analysis,
+                paper_outputs_payload=paper_outputs,
+                autonomous_paper_payload=autonomous_paper_outputs,
+                experiment_bindings_payload=experiment_claim_bindings,
+                citation_bindings_payload=paper_citation_bindings,
+            )
         if export_latex:
             checkpoint("auto scientist: running paper compile pipeline", 0.936)
             try:
@@ -271,12 +427,38 @@ def run_auto_scientist(
                 )
             except Exception as exc:
                 paper_compile = {"error": exc.__class__.__name__, "relative_path": LATEX_COMPILE_REPORT_JSON}
+            gate_payload = phase_gate("compile_export")
+            if gate_payload.get("blocking_gate"):
+                return awaiting_response(
+                    gate_payload,
+                    ideas_payload=ideas,
+                    experiment_plan=plan,
+                    experiment_results=all_results,
+                    experiment_tree_payload=experiment_tree,
+                    revision_payload=revision_summary,
+                    analysis_payload=analysis,
+                    paper_outputs_payload=paper_outputs,
+                    autonomous_paper_payload=autonomous_paper_outputs,
+                    experiment_bindings_payload=experiment_claim_bindings,
+                    citation_bindings_payload=paper_citation_bindings,
+                    compile_payload=paper_compile,
+                )
         else:
             paper_compile = {}
     checkpoint("auto scientist: running simulated reviewer", 0.94)
     review = run_scientist_reviewer(project_dir, project_id, run_id, analysis)
     checkpoint("auto scientist: writing final artifacts", 0.97)
     completed_at = utc_now()
+    final_phase_gates: dict[str, Any] = {}
+    if normalized_copilot_mode != "off":
+        final_phase_gates = write_phase_gates(
+            project_dir,
+            project_id,
+            mode=normalized_copilot_mode,
+            run_id=run_id,
+            expected_phases=phase_names,
+            active_phase=None,
+        )
     latest = {
         "schema_version": f"{SCHEMA_PREFIX}.run.v1",
         "project_id": project_id,
@@ -285,6 +467,8 @@ def run_auto_scientist(
         "completed_at": completed_at,
         "status": "completed",
         "mode": "safe_local_auto_scientist_mvp",
+        "copilot_mode": normalized_copilot_mode,
+        "phase_gate_file": PHASE_GATES_JSON if final_phase_gates else None,
         "arbitrary_code_execution": False,
         "safe_experiment_templates_only": not allow_generated_code_experiments,
         "generated_code_experiments_enabled": allow_generated_code_experiments,
@@ -340,6 +524,7 @@ def run_auto_scientist(
             "experiment_tree_search_enabled": enable_experiment_tree_search,
             "generated_code_revision_loop_enabled": enable_generated_code_revision_loop and allow_generated_code_experiments,
             "review_decision": review.get("overall_decision"),
+            "copilot_mode": normalized_copilot_mode,
         },
         source="api",
         event_category="agent",
@@ -347,4 +532,4 @@ def run_auto_scientist(
         entity_type="auto_scientist",
         entity_id=run_id,
     )
-    return {"run": latest, "ideas": ideas, "experiment_plan": plan, "experiment_results": all_results, "experiment_tree": experiment_tree, "generated_code_revision": revision_summary, "analysis": analysis, "review": review, "autonomous_paper_outputs": autonomous_paper_outputs, "experiment_claim_bindings": experiment_claim_bindings, "paper_citation_bindings": paper_citation_bindings, "paper_compile": paper_compile}
+    return {"run": latest, "ideas": ideas, "experiment_plan": plan, "experiment_results": all_results, "experiment_tree": experiment_tree, "generated_code_revision": revision_summary, "analysis": analysis, "review": review, "autonomous_paper_outputs": autonomous_paper_outputs, "experiment_claim_bindings": experiment_claim_bindings, "paper_citation_bindings": paper_citation_bindings, "paper_compile": paper_compile, "phase_gates": final_phase_gates}
