@@ -130,6 +130,7 @@ reports/            Local verification reports, ignored by git
 
 - `LLM_MODE=mock` is the default.
 - Tests and demos must not require real API keys, external networks, or external research services.
+- Optional reference providers such as Crossref, Semantic Scholar, OpenAlex, and arXiv only generate candidate metadata for review; unavailable providers must fail gracefully.
 - Generated-code experiments are registered, sandboxed, reviewable, and/or approval-gated depending on settings.
 - Do not fabricate DOI values, authors, years, journals, pages, p-values, significance, causal claims, experimental conclusions, or verified references.
 - Do not present mock/demo output as real scientific evidence.

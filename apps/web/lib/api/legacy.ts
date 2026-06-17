@@ -3070,7 +3070,10 @@ export const mockReferenceVerificationResults: ReferenceVerificationResult[] = [
       year: null,
       doi: null,
       journal: null,
-      url: null
+      url: null,
+      provider_record_id: null,
+      provider_url: null,
+      source: "existing_local_metadata"
     },
     match_scores: {
       title_match_score: 1,
@@ -3109,6 +3112,8 @@ export const mockReferenceVerificationSummary: ReferenceVerificationSummaryRespo
     mock_fixture: 1,
     crossref_optional: 0,
     semantic_scholar_optional: 0,
+    openalex_optional: 0,
+    arxiv_optional: 0,
     pubmed_optional: 0
   }
 };
