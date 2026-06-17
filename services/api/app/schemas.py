@@ -697,10 +697,28 @@ class PaperWriterLatexExportRequest(BaseModel):
     compile_pdf: bool = False
 
 
+def _validate_reference_literature_ids(value: list[str] | None) -> list[str]:
+    cleaned: list[str] = []
+    for item in value or []:
+        if not isinstance(item, str):
+            raise ValueError("reference_literature_ids must contain strings")
+        literature_id = item.strip()
+        if not literature_id:
+            continue
+        if "/" in literature_id or "\\" in literature_id or ".." in literature_id:
+            raise ValueError("reference_literature_ids must contain literature identifiers, not paths")
+        if literature_id not in cleaned:
+            cleaned.append(literature_id)
+    if len(cleaned) > 10:
+        raise ValueError("reference_literature_ids supports at most 10 entries")
+    return cleaned
+
+
 class AutoScientistIdeaRequest(BaseModel):
     topic: str | None = Field(default=None, max_length=240)
     research_question: str | None = Field(default=None, max_length=1000)
     max_ideas: int = Field(default=3, ge=1, le=6)
+    reference_literature_ids: list[str] = Field(default_factory=list, max_length=10)
 
     @field_validator("topic", "research_question")
     @classmethod
@@ -709,6 +727,11 @@ class AutoScientistIdeaRequest(BaseModel):
             return None
         cleaned = value.strip()
         return cleaned or None
+
+    @field_validator("reference_literature_ids")
+    @classmethod
+    def validate_reference_literature_ids(cls, value: list[str] | None) -> list[str]:
+        return _validate_reference_literature_ids(value)
 
 
 class AutoScientistRunRequest(BaseModel):
@@ -734,6 +757,7 @@ class AutoScientistRunRequest(BaseModel):
     enable_experiment_tree_search: bool = False
     experiment_tree_max_depth: int = Field(default=1, ge=0, le=3)
     experiment_tree_branching_factor: int = Field(default=2, ge=1, le=4)
+    reference_literature_ids: list[str] = Field(default_factory=list, max_length=10)
 
     @field_validator("topic", "research_question", "generated_code_docker_image")
     @classmethod
@@ -742,6 +766,11 @@ class AutoScientistRunRequest(BaseModel):
             return None
         cleaned = value.strip()
         return cleaned or None
+
+    @field_validator("reference_literature_ids")
+    @classmethod
+    def validate_reference_literature_ids(cls, value: list[str] | None) -> list[str]:
+        return _validate_reference_literature_ids(value)
 
 
 class AutoScientistGeneratedCodeApprovalRequest(BaseModel):

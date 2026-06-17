@@ -39,6 +39,8 @@ CANDIDATE_FILES = [
     "trust/human_review_decisions.jsonl",
     "trust/evidence_trust_report.md",
     "auto_scientist/ideas.json",
+    "auto_scientist/reference_brief.json",
+    "auto_scientist/reference_brief.md",
     "auto_scientist/experiment_plan.json",
     "auto_scientist/runs.jsonl",
     "auto_scientist/latest_run.json",
