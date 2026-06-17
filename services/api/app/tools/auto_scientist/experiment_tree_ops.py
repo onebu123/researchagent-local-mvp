@@ -7,6 +7,7 @@ from app.tools.audit_log import append_audit_event
 from app.tools.auto_scientist.contracts import (
     ANALYSIS_JSON,
     EXPERIMENT_PLAN_JSON,
+    EXPERIMENT_TREE_FAILURES_JSONL,
     EXPERIMENT_TREE_JSON,
     EXPERIMENT_TREE_MD,
     IDEAS_JSON,
@@ -26,7 +27,12 @@ from app.tools.auto_scientist.experiment_claim_binding import (
     generate_experiment_claim_bindings,
 )
 from app.tools.auto_scientist.experiment_runner import run_experiment_plan
-from app.tools.auto_scientist.experiment_tree_search import _node_from_result, score_experiment_result
+from app.tools.auto_scientist.experiment_tree_search import (
+    _failure_record,
+    _node_from_result,
+    refresh_tree_selection_metadata,
+    render_experiment_tree_markdown,
+)
 from app.tools.auto_scientist.generated_code_sandbox import GENERATED_CODE_TEMPLATE
 from app.tools.auto_scientist.scientist_paper import generate_auto_scientist_paper
 
@@ -91,34 +97,7 @@ def _tree_context(tree: dict[str, Any]) -> dict[str, Any]:
 
 
 def _render_tree_markdown(tree: dict[str, Any]) -> str:
-    best_node = tree.get("selected_best_node") or tree.get("best_node") or {}
-    lines = [
-        "# Auto Scientist Experiment Tree",
-        "",
-        "This tree search expands safe local experiment candidates. Scores are heuristic and not scientific proof.",
-        "",
-        f"- Run ID: `{tree.get('run_id', 'unknown')}`",
-        f"- Nodes: {len(tree.get('nodes', []) if isinstance(tree.get('nodes'), list) else [])}",
-        f"- Edges: {len(tree.get('edges', []) if isinstance(tree.get('edges'), list) else [])}",
-        f"- Best node: `{best_node.get('node_id', 'none') if isinstance(best_node, dict) else 'none'}`",
-    ]
-    if tree.get("selected_best_node_id"):
-        lines.extend(
-            [
-                f"- Human-selected best node: `{tree.get('selected_best_node_id')}`",
-                f"- Selection reason: {tree.get('selected_reason') or 'not provided'}",
-            ]
-        )
-    lines.extend(["", "## Nodes", ""])
-    for node in tree.get("nodes", []) if isinstance(tree.get("nodes"), list) else []:
-        if not isinstance(node, dict):
-            continue
-        selected = " selected" if node.get("node_id") == tree.get("selected_best_node_id") else ""
-        lines.append(
-            f"- `{node.get('node_id')}` depth={node.get('depth')} template={node.get('template_name')} "
-            f"status={node.get('status')} score={node.get('score')}{selected}"
-        )
-    return "\n".join(lines) + "\n"
+    return render_experiment_tree_markdown(tree)
 
 
 def _persist_tree(project_dir: Path, tree: dict[str, Any]) -> None:
@@ -126,12 +105,9 @@ def _persist_tree(project_dir: Path, tree: dict[str, Any]) -> None:
     edges = tree.get("edges") if isinstance(tree.get("edges"), list) else []
     tree["node_count"] = len(nodes)
     tree["edge_count"] = len(edges)
-    if nodes:
-        tree["best_node"] = max(
-            [node for node in nodes if isinstance(node, dict)],
-            key=lambda item: float(item.get("score") or 0.0),
-            default=tree.get("best_node"),
-        )
+    tree["failure_log_file"] = tree.get("failure_log_file") or EXPERIMENT_TREE_FAILURES_JSONL
+    tree["failure_count"] = sum(1 for node in nodes if isinstance(node, dict) and node.get("failure_reason"))
+    refresh_tree_selection_metadata(tree)
     tree["updated_at"] = utc_now()
     write_project_json(project_dir, EXPERIMENT_TREE_JSON, tree)
     write_project_text(project_dir, EXPERIMENT_TREE_MD, _render_tree_markdown(tree))
@@ -270,6 +246,8 @@ def rerun_experiment_tree_node(
     tree.setdefault("rerun_records", [])
     if isinstance(tree.get("rerun_records"), list):
         tree["rerun_records"].append({"rerun_id": rerun_id, "source_node_id": node_id, "rerun_node_id": rerun_node.get("node_id") if rerun_node else None})
+    if rerun_node and rerun_node.get("failure_reason"):
+        append_jsonl(project_dir, EXPERIMENT_TREE_FAILURES_JSONL, _failure_record(project_id, rerun_id, rerun_node))
     _persist_tree(project_dir, tree)
     record = {
         "schema_version": f"{SCHEMA_PREFIX}.experiment_tree_rerun.v1",
