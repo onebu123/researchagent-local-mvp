@@ -136,6 +136,7 @@ def run_auto_scientist_job(
             enable_experiment_tree_search=request_payload.enable_experiment_tree_search,
             experiment_tree_max_depth=request_payload.experiment_tree_max_depth,
             experiment_tree_branching_factor=request_payload.experiment_tree_branching_factor,
+            reference_literature_ids=request_payload.reference_literature_ids,
             progress_callback=update,
         )
         update("auto scientist loop completed", 0.95)
@@ -185,6 +186,7 @@ def start_auto_scientist_job(
             enable_experiment_tree_search=request_payload.enable_experiment_tree_search,
             experiment_tree_max_depth=request_payload.experiment_tree_max_depth,
             experiment_tree_branching_factor=request_payload.experiment_tree_branching_factor,
+            reference_literature_ids=request_payload.reference_literature_ids,
             progress_callback=update,
         )
         update("auto scientist loop completed", 0.95)

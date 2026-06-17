@@ -206,6 +206,7 @@ def _revision_patch_items(project_dir: Path) -> list[dict[str, Any]]:
 def _auto_scientist_items(project_dir: Path) -> list[dict[str, Any]]:
     review = _read_json(project_dir / "auto_scientist" / "scientist_review.json", {})
     paper_audit = _read_json(project_dir / "auto_scientist" / "paper_audit.json", {})
+    reference_brief = _read_json(project_dir / "auto_scientist" / "reference_brief.json", {})
     items: list[dict[str, Any]] = []
     if isinstance(review, dict) and review:
         for index, issue in enumerate(review.get("blocking_issues", []), start=1):
@@ -580,6 +581,23 @@ def _auto_scientist_items(project_dir: Path) -> list[dict[str, Any]]:
                 "review_experiment_results_claims_and_citations",
             )
         )
+    if isinstance(reference_brief, dict) and reference_brief:
+        summary = reference_brief.get("summary") if isinstance(reference_brief.get("summary"), dict) else {}
+        warning_count = int(summary.get("review_warning_count") or 0)
+        if warning_count > 0:
+            items.append(
+                _item(
+                    "auto_scientist_reference_brief_review",
+                    "reference_ideation",
+                    "warning",
+                    "Reference-based ideation brief requires review",
+                    "Selected local references include placeholder, unverified, unapproved, or uncovered metadata. Review warnings before using ideas beyond the local workflow.",
+                    "auto_scientist/reference_brief.json",
+                    "auto_scientist_reference_brief",
+                    "reference_brief",
+                    "review_reference_metadata_and_source_passages",
+                )
+            )
     return items
 
 

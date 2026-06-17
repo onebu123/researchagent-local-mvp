@@ -34,6 +34,7 @@ import {
   getAutoScientistStatus,
   getAutoScientistTreeRevisionPlan,
   getHumanReviewQueue,
+  getLiterature,
   getProjectJobEvents,
   getProjectJobLog,
   getProjectJobs,
@@ -55,6 +56,7 @@ import type {
   AutoScientistStatus,
   AutoScientistTreeRevisionPlan,
   HumanReviewQueue,
+  LiteratureRecord,
   ProjectJob,
   ProjectJobEvents,
   ProjectJobLog,
@@ -390,6 +392,8 @@ export function AutoScientistWorkbench() {
   const [dockerImage, setDockerImage] = useState("python:3.11-slim");
   const [snapshot, setSnapshot] = useState<WorkbenchSnapshot>(emptySnapshot);
   const [ideas, setIdeas] = useState<AutoScientistIdeas | null>(null);
+  const [literatureRecords, setLiteratureRecords] = useState<LiteratureRecord[]>([]);
+  const [selectedReferenceIds, setSelectedReferenceIds] = useState<string[]>([]);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [message, setMessage] = useState("Ready to run local Auto Scientist workflow.");
   const [apiMode, setApiMode] = useState<"live" | "mock">("live");
@@ -411,7 +415,7 @@ export function AutoScientistWorkbench() {
     if (!targetProjectId.trim()) return;
     if (!silent) setBusyAction((current) => current ?? "refresh");
     try {
-      const [statusResult, jobsResult, proposalsResult, approvalsResult, queueResult, treeResult, treeRevisionResult, bindingResult, citationBindingResult, compileResult] = await Promise.allSettled([
+      const [statusResult, jobsResult, proposalsResult, approvalsResult, queueResult, treeResult, treeRevisionResult, bindingResult, citationBindingResult, compileResult, literatureResult] = await Promise.allSettled([
         getAutoScientistStatus(targetProjectId),
         getProjectJobs(targetProjectId, 5),
         getAutoScientistGeneratedCodeProposals(targetProjectId),
@@ -421,7 +425,8 @@ export function AutoScientistWorkbench() {
         getAutoScientistTreeRevisionPlan(targetProjectId),
         getAutoScientistExperimentClaimBindings(targetProjectId),
         getAutoScientistPaperCitationBindings(targetProjectId),
-        getAutoScientistPaperCompileReport(targetProjectId)
+        getAutoScientistPaperCompileReport(targetProjectId),
+        getLiterature(targetProjectId)
       ]);
       const jobs = jobsResult.status === "fulfilled" ? jobsResult.value : [];
       let jobLog: ProjectJobLog | null = null;
@@ -454,10 +459,15 @@ export function AutoScientistWorkbench() {
         paperCitationBindings: citationBindingResult.status === "fulfilled" ? citationBindingResult.value : null,
         paperCompileReport: compileResult.status === "fulfilled" ? compileResult.value : null
       });
+      const records = literatureResult.status === "fulfilled" ? literatureResult.value : [];
+      setLiteratureRecords(records);
+      setSelectedReferenceIds((current) => current.filter((id) => records.some((record) => record.literature_id === id)));
       setApiMode("live");
       if (!silent) setMessage("Workspace status refreshed from local backend.");
     } catch (error) {
       setSnapshot(mockSnapshot);
+      setLiteratureRecords([]);
+      setSelectedReferenceIds([]);
       setApiMode("mock");
       setMessage(error instanceof Error ? `Backend unavailable; showing Demo Mode / Mock Mode. ${error.message}` : "Backend unavailable; showing Demo Mode / Mock Mode.");
     } finally {
@@ -522,7 +532,8 @@ export function AutoScientistWorkbench() {
       generated_code_revision_rounds: enableRevision ? 1 : 0,
       enable_experiment_tree_search: enableTree,
       experiment_tree_max_depth: enableTree ? 1 : 0,
-      experiment_tree_branching_factor: 2
+      experiment_tree_branching_factor: 2,
+      reference_literature_ids: selectedReferenceIds
     } as const;
   }
 
@@ -532,7 +543,8 @@ export function AutoScientistWorkbench() {
       const value = await createAutoScientistIdeas(projectId, {
         topic,
         research_question: researchQuestion,
-        max_ideas: 3
+        max_ideas: 3,
+        reference_literature_ids: selectedReferenceIds
       });
       setIdeas(value);
       setApiMode("live");
@@ -858,6 +870,39 @@ export function AutoScientistWorkbench() {
                   <label className="block">
                     <FieldLabel>Research question</FieldLabel>
                     <textarea className="mt-1 min-h-[110px] w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={researchQuestion} onChange={(event) => setResearchQuestion(event.target.value)} />
+                  </label>
+                  <label className="block">
+                    <FieldLabel>Local references</FieldLabel>
+                    <select
+                      multiple
+                      className="mt-1 min-h-[120px] w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                      value={selectedReferenceIds}
+                      onChange={(event) => {
+                        const values = Array.from(event.currentTarget.selectedOptions)
+                          .map((option) => option.value)
+                          .slice(0, 10);
+                        setSelectedReferenceIds(values);
+                      }}
+                    >
+                      {literatureRecords.length ? literatureRecords.map((record) => (
+                        <option key={record.literature_id} value={record.literature_id}>
+                          {record.literature_id} / {record.title || record.source_file}
+                        </option>
+                      )) : <option value="" disabled>No local literature records</option>}
+                    </select>
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 font-bold text-slate-600">{selectedReferenceIds.length}/10 selected</span>
+                      {selectedReferenceIds.map((id) => (
+                        <button
+                          key={id}
+                          type="button"
+                          className="rounded-full border border-slate-300 bg-white px-2 py-1 font-bold text-slate-700"
+                          onClick={() => setSelectedReferenceIds((current) => current.filter((item) => item !== id))}
+                        >
+                          {id} x
+                        </button>
+                      ))}
+                    </div>
                   </label>
                   <button
                     type="button"

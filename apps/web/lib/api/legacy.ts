@@ -239,7 +239,7 @@ export async function decideHumanReviewItem(
 
 export async function createAutoScientistIdeas(
   projectId: string,
-  payload: { topic?: string; research_question?: string; max_ideas?: number } = {}
+  payload: { topic?: string; research_question?: string; max_ideas?: number; reference_literature_ids?: string[] } = {}
 ): Promise<AutoScientistIdeas> {
   return request<AutoScientistIdeas>(`/api/projects/${projectId}/auto-scientist/ideas`, {
     method: "POST",
@@ -276,6 +276,7 @@ export async function runAutoScientist(
     enable_experiment_tree_search?: boolean;
     experiment_tree_max_depth?: number;
     experiment_tree_branching_factor?: number;
+    reference_literature_ids?: string[];
   } = {}
 ): Promise<AutoScientistRun> {
   return request<AutoScientistRun>(`/api/projects/${projectId}/auto-scientist/run`, {

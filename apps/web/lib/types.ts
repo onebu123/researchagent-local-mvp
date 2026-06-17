@@ -305,6 +305,14 @@ export type AutoScientistIdeas = {
   mode: string;
   arbitrary_code_execution: boolean;
   evidence_summary: Record<string, unknown>;
+  reference_literature_ids?: string[];
+  reference_brief_file?: string;
+  reference_brief_markdown_file?: string;
+  reference_brief?: {
+    summary?: Record<string, number>;
+    warnings?: string[];
+    limitations?: string[];
+  };
   ideas: Array<Record<string, unknown>>;
   limitations: string[];
 };

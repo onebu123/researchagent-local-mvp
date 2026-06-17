@@ -100,6 +100,7 @@ def create_auto_scientist_ideas(
             topic=request_payload.topic,
             research_question=request_payload.research_question,
             max_ideas=request_payload.max_ideas,
+            reference_literature_ids=request_payload.reference_literature_ids,
         )
     except Exception as exc:
         raise _handle_tool_error(exc) from exc
@@ -144,6 +145,7 @@ def create_auto_scientist_run(
             enable_experiment_tree_search=request_payload.enable_experiment_tree_search,
             experiment_tree_max_depth=request_payload.experiment_tree_max_depth,
             experiment_tree_branching_factor=request_payload.experiment_tree_branching_factor,
+            reference_literature_ids=request_payload.reference_literature_ids,
         )
     except Exception as exc:
         raise _handle_tool_error(exc) from exc

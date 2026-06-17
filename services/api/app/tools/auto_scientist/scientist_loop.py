@@ -36,6 +36,7 @@ from app.tools.auto_scientist.scientist_reviewer import run_scientist_reviewer
 from app.tools.auto_scientist.scientist_paper import generate_auto_scientist_paper
 from app.tools.auto_scientist.paper_citation_binding import PAPER_CITATION_BINDINGS_JSON, generate_paper_citation_bindings
 from app.tools.auto_scientist.paper_compile import LATEX_COMPILE_REPORT_JSON, compile_auto_scientist_paper
+from app.tools.auto_scientist.reference_brief import REFERENCE_BRIEF_JSON, REFERENCE_BRIEF_MD
 from app.tools.paper_writer.latex_export import export_draft_latex
 from app.tools.paper_writer.outline_builder import generate_paper_outline
 from app.tools.paper_writer.paper_plan import generate_paper_plan
@@ -67,6 +68,7 @@ def read_auto_scientist_status(project_id: str) -> dict[str, Any]:
         "experiment_tree": {"available": (project_dir / EXPERIMENT_TREE_JSON).exists(), "relative_path": EXPERIMENT_TREE_JSON},
         "paper_citation_bindings": {"available": (project_dir / PAPER_CITATION_BINDINGS_JSON).exists(), "relative_path": PAPER_CITATION_BINDINGS_JSON},
         "paper_compile": {"available": (project_dir / LATEX_COMPILE_REPORT_JSON).exists(), "relative_path": LATEX_COMPILE_REPORT_JSON},
+        "reference_brief": {"available": (project_dir / REFERENCE_BRIEF_JSON).exists(), "relative_path": REFERENCE_BRIEF_JSON},
         "latest_run": latest if isinstance(latest, dict) else {},
         "run_count": len(read_jsonl(project_dir, RUNS_JSONL)),
         "generated_code_experiments_enabled": bool((latest if isinstance(latest, dict) else {}).get("generated_code_experiments_enabled")),
@@ -101,6 +103,7 @@ def run_auto_scientist(
     enable_experiment_tree_search: bool = False,
     experiment_tree_max_depth: int = 1,
     experiment_tree_branching_factor: int = 2,
+    reference_literature_ids: list[str] | None = None,
     progress_callback: Callable[[str, float | None], None] | None = None,
 ) -> dict[str, Any]:
     project, project_dir = _project_context(project_id)
@@ -121,6 +124,7 @@ def run_auto_scientist(
         topic=topic,
         research_question=research_question,
         max_ideas=max_ideas,
+        reference_literature_ids=reference_literature_ids,
     )
     checkpoint("auto scientist: building experiment plan", 0.20)
     plan = build_experiment_plan(
@@ -301,6 +305,10 @@ def run_auto_scientist(
         "experiment_tree_file": EXPERIMENT_TREE_JSON if experiment_tree else None,
         "experiment_tree_best_node": (experiment_tree.get("best_node") if isinstance(experiment_tree, dict) else None),
         "ideas_file": IDEAS_JSON,
+        "reference_literature_ids": ideas.get("reference_literature_ids", []),
+        "reference_brief_file": REFERENCE_BRIEF_JSON if ideas.get("reference_brief_file") else None,
+        "reference_brief_markdown_file": REFERENCE_BRIEF_MD if ideas.get("reference_brief_markdown_file") else None,
+        "reference_brief_summary": (ideas.get("reference_brief") or {}).get("summary") if isinstance(ideas.get("reference_brief"), dict) else None,
         "experiment_plan_file": "auto_scientist/experiment_plan.json",
         "runs_file": RUNS_JSONL,
         "analysis_file": ANALYSIS_JSON,
@@ -340,6 +348,7 @@ def run_auto_scientist(
             "experiment_tree_search_enabled": enable_experiment_tree_search,
             "generated_code_revision_loop_enabled": enable_generated_code_revision_loop and allow_generated_code_experiments,
             "review_decision": review.get("overall_decision"),
+            "reference_count": len(ideas.get("reference_literature_ids", [])) if isinstance(ideas.get("reference_literature_ids"), list) else 0,
         },
         source="api",
         event_category="agent",
