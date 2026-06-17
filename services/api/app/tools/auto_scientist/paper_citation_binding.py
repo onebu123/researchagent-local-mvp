@@ -12,6 +12,7 @@ from app.tools.file_tools import ensure_dir, write_json, write_text
 from app.tools.literature_index import load_literature_index
 from app.tools.paper_writer.citation_binder import retrieve_section_passages
 from app.tools.manuscript_references import generate_manuscript_references
+from app.tools.reference_verification import read_reference_verification_results
 
 PAPER_CITATION_BINDINGS_JSON = "manuscript/paper_citation_bindings.json"
 PAPER_CITATION_BINDINGS_MD = "manuscript/paper_citation_bindings.md"
@@ -220,6 +221,34 @@ def _approved_reference_keys(project_dir: Path, project_id: str) -> dict[str, st
     return result
 
 
+def _latest_reference_verifications(project_dir: Path) -> dict[str, dict[str, Any]]:
+    latest: dict[str, dict[str, Any]] = {}
+    for result in read_reference_verification_results(project_dir):
+        if not isinstance(result, dict) or not result.get("literature_id"):
+            continue
+        latest[str(result["literature_id"])] = {
+            "literature_id": result.get("literature_id"),
+            "verification_id": result.get("verification_id"),
+            "provider": result.get("provider"),
+            "status": result.get("status"),
+            "verification_status": result.get("verification_status"),
+            "candidate": result.get("candidate") if isinstance(result.get("candidate"), dict) else {},
+            "match_scores": result.get("match_scores") if isinstance(result.get("match_scores"), dict) else {},
+            "requires_human_approval": result.get("requires_human_approval") is True,
+            "applied_to_literature_index": result.get("applied_to_literature_index") is True,
+            "error": result.get("error"),
+        }
+    return latest
+
+
+def _binding_reference_verifications(
+    passages: list[dict[str, Any]],
+    latest_verifications: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    literature_ids = sorted({str(passage.get("literature_id")) for passage in passages if passage.get("literature_id")})
+    return [latest_verifications[literature_id] for literature_id in literature_ids if literature_id in latest_verifications]
+
+
 def _passage_flags(passages: list[dict[str, Any]]) -> set[str]:
     return {
         str(flag)
@@ -302,6 +331,8 @@ def _markdown_report(payload: dict[str, Any]) -> str:
         "unbound",
         "formal_reference_available",
         "source_passage_only",
+        "reference_verification_candidates",
+        "reference_provider_failed",
         "human_review_required",
     ]:
         lines.append(f"- {key}: {summary.get(key, 0)}")
@@ -328,6 +359,11 @@ def _markdown_report(payload: dict[str, Any]) -> str:
             if isinstance(passage, dict):
                 lines.append(
                     f"  - {passage.get('chunk_id')} / {passage.get('source_locator') or passage.get('source_file')} / score={passage.get('score')}"
+                )
+        for verification in item.get("reference_verifications", [])[:3]:
+            if isinstance(verification, dict):
+                lines.append(
+                    f"  - reference verification: {verification.get('literature_id')} / {verification.get('provider')} / {verification.get('verification_status')}"
                 )
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
@@ -370,6 +406,7 @@ def generate_paper_citation_bindings(
     sentences = _extract_manuscript_sentences(markdown)
     approved_keys = _approved_reference_keys(project_dir, project_id)
     literature_entries = _literature_map(project_dir)
+    latest_verifications = _latest_reference_verifications(project_dir)
     references_status = generate_manuscript_references(project_dir, project_id)
     bindings: list[dict[str, Any]] = []
 
@@ -396,6 +433,7 @@ def generate_paper_citation_bindings(
         if not markers and passages:
             markers = [f"[source:{passages[0].get('chunk_id')}]" if passages[0].get("chunk_id") else "[source-passage]"]
         flags = _warning_flags(binding_status, citation_status, passages, literature_entries) if claim_like else []
+        reference_verifications = _binding_reference_verifications(passages, latest_verifications) if claim_like else []
         human_review_required = bool(claim_like and (binding_status != "bound" or citation_status != "formal_reference_available" or flags))
         bindings.append(
             {
@@ -411,6 +449,7 @@ def generate_paper_citation_bindings(
                 "matched_source_passages": passages,
                 "literature_ids": sorted({str(p.get("literature_id")) for p in passages if p.get("literature_id")}),
                 "formal_reference_literature_ids": sorted(set(formal_ids)),
+                "reference_verifications": reference_verifications,
                 "suggested_citation_marker": "; ".join(markers),
                 "citation_warning_flags": flags,
                 "human_review_required": human_review_required,
@@ -442,11 +481,19 @@ def generate_paper_citation_bindings(
             "formal_reference_available": sum(1 for item in claim_bindings if item.get("citation_support_status") == "formal_reference_available"),
             "source_passage_only": sum(1 for item in claim_bindings if item.get("citation_support_status") == "source_passage_only"),
             "missing_source_passage": sum(1 for item in claim_bindings if item.get("citation_support_status") == "missing_source_passage"),
+            "reference_verification_candidates": sum(1 for item in claim_bindings if item.get("reference_verifications")),
+            "reference_provider_failed": sum(
+                1
+                for item in claim_bindings
+                for verification in item.get("reference_verifications", [])
+                if isinstance(verification, dict) and verification.get("verification_status") == "provider_failed"
+            ),
             "human_review_required": sum(1 for item in claim_bindings if item.get("human_review_required")),
         },
         "limitations": [
             "Citation binding uses local source-passage retrieval and approved-reference metadata only.",
             "Source-passage suggestions are not formal citation verification.",
+            "External reference verification candidates are review context only and are not approved references.",
             "Formal LaTeX citation markers are emitted only when BibTeX entries are approved by the local reference workflow.",
         ],
     }

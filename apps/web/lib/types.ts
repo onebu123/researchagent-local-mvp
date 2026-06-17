@@ -638,6 +638,7 @@ export type AutoScientistPaperCitationBinding = {
   matched_source_passages: Array<Record<string, unknown>>;
   literature_ids: string[];
   formal_reference_literature_ids: string[];
+  reference_verifications?: ReferenceVerificationResult[];
   suggested_citation_marker: string;
   citation_warning_flags: string[];
   human_review_required: boolean;
@@ -2310,6 +2311,8 @@ export type ReferenceVerificationProvider =
   | "mock_fixture"
   | "crossref_optional"
   | "semantic_scholar_optional"
+  | "openalex_optional"
+  | "arxiv_optional"
   | "pubmed_optional";
 
 export type ReferenceMatchScores = {

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
@@ -14,6 +17,8 @@ ReferenceProvider = Literal[
     "mock_fixture",
     "crossref_optional",
     "semantic_scholar_optional",
+    "openalex_optional",
+    "arxiv_optional",
     "pubmed_optional",
 ]
 
@@ -21,6 +26,8 @@ PROVIDERS: set[str] = {
     "mock_fixture",
     "crossref_optional",
     "semantic_scholar_optional",
+    "openalex_optional",
+    "arxiv_optional",
     "pubmed_optional",
 }
 STATUSES = {
@@ -85,6 +92,21 @@ def _query_from_entry(entry: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _clean_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
+    result = {
+        "title": candidate.get("title"),
+        "authors": candidate.get("authors") if isinstance(candidate.get("authors"), list) else [],
+        "year": candidate.get("year"),
+        "doi": candidate.get("doi"),
+        "journal": candidate.get("journal"),
+        "url": candidate.get("url"),
+        "provider_record_id": candidate.get("provider_record_id"),
+        "provider_url": candidate.get("provider_url"),
+        "source": candidate.get("source"),
+    }
+    return result
+
+
 def _mock_candidate(entry: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str]]:
     title = str(entry.get("title") or "").strip()
     warnings: list[str] = []
@@ -95,24 +117,270 @@ def _mock_candidate(entry: dict[str, Any]) -> tuple[dict[str, Any] | None, list[
     if not entry.get("doi"):
         warnings.append("No DOI candidate was supplied; DOI was not fabricated.")
     return (
-        {
-            "title": title,
-            "authors": entry.get("authors") if isinstance(entry.get("authors"), list) else [],
-            "year": entry.get("year"),
-            "doi": entry.get("doi"),
-            "journal": entry.get("journal"),
-            "url": None,
-        },
+        _clean_candidate(
+            {
+                "title": title,
+                "authors": entry.get("authors") if isinstance(entry.get("authors"), list) else [],
+                "year": entry.get("year"),
+                "doi": entry.get("doi"),
+                "journal": entry.get("journal"),
+                "url": None,
+                "provider_record_id": None,
+                "provider_url": None,
+                "source": "existing_local_metadata",
+            }
+        ),
         warnings,
     )
 
 
-def _optional_provider_failure(provider: str) -> tuple[None, list[str], str]:
+def _optional_provider_failure(provider: str, reason: str) -> tuple[None, list[str], str]:
     return (
         None,
-        [f"{provider} failed gracefully because optional network lookup is disabled in local MVP mode."],
-        "optional provider is not configured in local MVP mode",
+        [f"{provider} failed gracefully; no metadata was written to literature_index.json."],
+        reason,
     )
+
+
+def _read_url_json(url: str, timeout: float = 10.0) -> dict[str, Any]:
+    request = urllib.request.Request(url, headers={"User-Agent": "ResearchAgent-local-mvp/3.0"})
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    return payload if isinstance(payload, dict) else {}
+
+
+def _read_url_text(url: str, timeout: float = 10.0) -> str:
+    request = urllib.request.Request(url, headers={"User-Agent": "ResearchAgent-local-mvp/3.0"})
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return response.read().decode("utf-8", errors="replace")
+
+
+def _first(value: Any) -> Any:
+    if isinstance(value, list) and value:
+        return value[0]
+    return None
+
+
+def _date_parts_year(value: Any) -> Any:
+    if not isinstance(value, dict):
+        return None
+    parts = value.get("date-parts")
+    if isinstance(parts, list) and parts and isinstance(parts[0], list) and parts[0]:
+        return parts[0][0]
+    return None
+
+
+def _crossref_author_names(item: dict[str, Any]) -> list[str]:
+    names: list[str] = []
+    for author in item.get("author", []) if isinstance(item.get("author"), list) else []:
+        if not isinstance(author, dict):
+            continue
+        parts = [str(author.get("given") or "").strip(), str(author.get("family") or "").strip()]
+        name = " ".join(part for part in parts if part)
+        if name:
+            names.append(name)
+    return names
+
+
+def _crossref_candidate(entry: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str], str | None]:
+    title = str(entry.get("title") or "").strip()
+    doi = str(entry.get("doi") or "").strip()
+    if not title and not doi:
+        return None, ["No title or DOI available for Crossref query."], None
+    query = {"rows": "1"}
+    if doi:
+        query["filter"] = f"doi:{doi}"
+    else:
+        query["query.title"] = title
+    payload = _read_url_json(f"https://api.crossref.org/works?{urllib.parse.urlencode(query)}")
+    items = payload.get("message", {}).get("items", [])
+    item = _first(items) if isinstance(items, list) else None
+    if not isinstance(item, dict):
+        return None, ["Crossref returned no candidate for this local record."], None
+    year = (
+        _date_parts_year(item.get("published-print"))
+        or _date_parts_year(item.get("published-online"))
+        or _date_parts_year(item.get("published"))
+        or _date_parts_year(item.get("issued"))
+    )
+    item_doi = item.get("DOI")
+    provider_url = item.get("URL") or (f"https://doi.org/{item_doi}" if item_doi else None)
+    return (
+        _clean_candidate(
+            {
+                "title": _first(item.get("title")) if isinstance(item.get("title"), list) else item.get("title"),
+                "authors": _crossref_author_names(item),
+                "year": year,
+                "doi": item_doi,
+                "journal": _first(item.get("container-title"))
+                if isinstance(item.get("container-title"), list)
+                else None,
+                "url": provider_url,
+                "provider_record_id": item_doi,
+                "provider_url": provider_url,
+                "source": "crossref",
+            }
+        ),
+        ["Crossref candidate metadata requires human review before approval."],
+        None,
+    )
+
+
+def _semantic_scholar_candidate(entry: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str], str | None]:
+    title = str(entry.get("title") or "").strip()
+    doi = str(entry.get("doi") or "").strip()
+    query_text = doi or title
+    if not query_text:
+        return None, ["No title or DOI available for Semantic Scholar query."], None
+    query = urllib.parse.urlencode(
+        {"query": query_text, "limit": "1", "fields": "title,year,authors,venue,externalIds,paperId,url"}
+    )
+    payload = _read_url_json(f"https://api.semanticscholar.org/graph/v1/paper/search?{query}")
+    items = payload.get("data", [])
+    item = _first(items) if isinstance(items, list) else None
+    if not isinstance(item, dict):
+        return None, ["Semantic Scholar returned no candidate for this local record."], None
+    external_ids = item.get("externalIds") if isinstance(item.get("externalIds"), dict) else {}
+    authors = item.get("authors") if isinstance(item.get("authors"), list) else []
+    paper_id = item.get("paperId")
+    provider_url = item.get("url") or (f"https://www.semanticscholar.org/paper/{paper_id}" if paper_id else None)
+    return (
+        _clean_candidate(
+            {
+                "title": item.get("title"),
+                "authors": [author.get("name") for author in authors if isinstance(author, dict) and author.get("name")],
+                "year": item.get("year"),
+                "doi": external_ids.get("DOI"),
+                "journal": item.get("venue"),
+                "url": provider_url,
+                "provider_record_id": paper_id,
+                "provider_url": provider_url,
+                "source": "semantic_scholar",
+            }
+        ),
+        ["Semantic Scholar candidate metadata requires human review before approval."],
+        None,
+    )
+
+
+def _openalex_candidate(entry: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str], str | None]:
+    title = str(entry.get("title") or "").strip()
+    doi = str(entry.get("doi") or "").strip()
+    if not title and not doi:
+        return None, ["No title or DOI available for OpenAlex query."], None
+    if doi:
+        query = urllib.parse.urlencode({"filter": f"doi:{doi}", "per-page": "1"})
+    else:
+        query = urllib.parse.urlencode({"search": title, "per-page": "1"})
+    payload = _read_url_json(f"https://api.openalex.org/works?{query}")
+    items = payload.get("results", [])
+    item = _first(items) if isinstance(items, list) else None
+    if not isinstance(item, dict):
+        return None, ["OpenAlex returned no candidate for this local record."], None
+    authorships = item.get("authorships") if isinstance(item.get("authorships"), list) else []
+    source = ((item.get("primary_location") or {}).get("source") or {}) if isinstance(item.get("primary_location"), dict) else {}
+    doi_value = item.get("doi")
+    if isinstance(doi_value, str):
+        doi_value = doi_value.replace("https://doi.org/", "")
+    return (
+        _clean_candidate(
+            {
+                "title": item.get("display_name"),
+                "authors": [
+                    author.get("author", {}).get("display_name")
+                    for author in authorships
+                    if isinstance(author, dict)
+                    and isinstance(author.get("author"), dict)
+                    and author.get("author", {}).get("display_name")
+                ],
+                "year": item.get("publication_year"),
+                "doi": doi_value,
+                "journal": source.get("display_name") if isinstance(source, dict) else None,
+                "url": item.get("id"),
+                "provider_record_id": item.get("id"),
+                "provider_url": item.get("id"),
+                "source": "openalex",
+            }
+        ),
+        ["OpenAlex candidate metadata requires human review before approval."],
+        None,
+    )
+
+
+def _xml_text(node: ET.Element, path: str, namespaces: dict[str, str]) -> str | None:
+    child = node.find(path, namespaces)
+    if child is None or child.text is None:
+        return None
+    return " ".join(child.text.split()) or None
+
+
+def _arxiv_candidate(entry: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str], str | None]:
+    title = str(entry.get("title") or "").strip()
+    if not title:
+        return None, ["No title available for arXiv query."], None
+    query = urllib.parse.urlencode({"search_query": f'ti:"{title}"', "start": "0", "max_results": "1"})
+    xml_text = _read_url_text(f"https://export.arxiv.org/api/query?{query}")
+    root = ET.fromstring(xml_text)
+    namespaces = {"atom": "http://www.w3.org/2005/Atom", "arxiv": "http://arxiv.org/schemas/atom"}
+    entry_node = root.find("atom:entry", namespaces)
+    if entry_node is None:
+        return None, ["arXiv returned no candidate for this local record."], None
+    published = _xml_text(entry_node, "atom:published", namespaces)
+    provider_url = _xml_text(entry_node, "atom:id", namespaces)
+    authors = [
+        " ".join((author.findtext("atom:name", default="", namespaces=namespaces) or "").split())
+        for author in entry_node.findall("atom:author", namespaces)
+    ]
+    return (
+        _clean_candidate(
+            {
+                "title": _xml_text(entry_node, "atom:title", namespaces),
+                "authors": [author for author in authors if author],
+                "year": published[:4] if published else None,
+                "doi": _xml_text(entry_node, "arxiv:doi", namespaces),
+                "journal": "arXiv",
+                "url": provider_url,
+                "provider_record_id": provider_url.rsplit("/", 1)[-1] if provider_url else None,
+                "provider_url": provider_url,
+                "source": "arxiv",
+            }
+        ),
+        ["arXiv candidate metadata requires human review before approval."],
+        None,
+    )
+
+
+def _provider_candidate(
+    entry: dict[str, Any],
+    provider: str,
+) -> tuple[dict[str, Any] | None, list[str], str | None, bool]:
+    if provider == "mock_fixture":
+        candidate, warnings = _mock_candidate(entry)
+        return candidate, warnings, None, False
+    if provider == "pubmed_optional":
+        candidate, warnings, error = _optional_provider_failure(
+            provider,
+            "PubMed optional lookup is not implemented in this local release candidate.",
+        )
+        return candidate, warnings, error, True
+    lookup = {
+        "crossref_optional": _crossref_candidate,
+        "semantic_scholar_optional": _semantic_scholar_candidate,
+        "openalex_optional": _openalex_candidate,
+        "arxiv_optional": _arxiv_candidate,
+    }.get(provider)
+    if lookup is None:
+        candidate, warnings, error = _optional_provider_failure(provider, "Unknown optional provider.")
+        return candidate, warnings, error, True
+    try:
+        candidate, warnings, error = lookup(entry)
+    except Exception as exc:
+        candidate, warnings, error = _optional_provider_failure(
+            provider,
+            f"{provider} optional lookup failed: {exc.__class__.__name__}",
+        )
+        return candidate, warnings, error, True
+    return candidate, warnings, error, False
 
 
 def _verification_status(
@@ -138,14 +406,7 @@ def _verification_status(
 
 
 def _empty_candidate() -> dict[str, Any]:
-    return {
-        "title": None,
-        "authors": [],
-        "year": None,
-        "doi": None,
-        "journal": None,
-        "url": None,
-    }
+    return _clean_candidate({})
 
 
 def _build_result(
@@ -154,13 +415,7 @@ def _build_result(
     provider: str,
 ) -> dict[str, Any]:
     query = _query_from_entry(entry)
-    provider_failed = False
-    error: str | None = None
-    if provider == "mock_fixture":
-        candidate, warnings = _mock_candidate(entry)
-    else:
-        candidate, warnings, error = _optional_provider_failure(provider)
-        provider_failed = True
+    candidate, warnings, error, provider_failed = _provider_candidate(entry, provider)
 
     scores = calculate_match_scores(query, candidate)
     status = _verification_status(entry, candidate, provider_failed, scores)
@@ -198,6 +453,8 @@ def summarize_reference_verification(project_dir: Path) -> dict[str, Any]:
         "mock_fixture": 0,
         "crossref_optional": 0,
         "semantic_scholar_optional": 0,
+        "openalex_optional": 0,
+        "arxiv_optional": 0,
         "pubmed_optional": 0,
     }
     for result in results:

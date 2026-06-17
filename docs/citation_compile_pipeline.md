@@ -2,10 +2,10 @@
 
 ResearchAgent can now connect the Auto Scientist manuscript to two final-paper readiness layers:
 
-1. **Paper citation/source-passage binding**: each claim-like manuscript sentence is matched to local source passages and the local approved-reference state.
+1. **Paper citation/source-passage binding**: each claim-like manuscript sentence is matched to local source passages, the local approved-reference state, and any latest reference-verification candidate context.
 2. **LaTeX/PDF compile pipeline**: the generated LaTeX source can be checked and compiled locally when a supported engine is available, or a clearly labeled preview PDF can be generated as a non-publication fallback.
 
-These features support review and handoff. They do not certify citation correctness, scientific validity, peer review, or publication readiness.
+These features support review and handoff. They do not certify citation correctness, scientific validity, peer review, or publication readiness. External provider results are candidate metadata only until a human approves and applies them through the local reference workflow.
 
 ## API
 
@@ -56,6 +56,7 @@ binding_status
 citation_support_status
 matched_source_passages
 formal_reference_literature_ids
+reference_verifications
 suggested_citation_marker
 citation_warning_flags
 human_review_required
@@ -72,6 +73,21 @@ not_applicable
 ```
 
 Formal LaTeX citation markers are emitted only for references that are approved through the local reference workflow. Otherwise the system uses source-passage markers and requires human review.
+
+## Optional reference verification providers
+
+Reference verification can use local mock metadata or optional external metadata providers:
+
+```text
+mock_fixture
+crossref_optional
+semantic_scholar_optional
+openalex_optional
+arxiv_optional
+pubmed_optional
+```
+
+Optional providers fail gracefully when network access is unavailable or a provider returns no candidate. They never write DOI, author, journal, year, or approval status back to `literature/literature_index.json`. Candidate fields such as provider record IDs and URLs are review context only.
 
 ## Compile artifacts
 
@@ -109,6 +125,7 @@ Review before external use:
 - weak or unbound citation bindings
 - source-passage-only citation suggestions
 - unapproved references
+- external reference candidates that have not been approved and applied
 - generated-code experiment claims
 - compile warnings or fallback preview PDFs
 ```
@@ -118,4 +135,4 @@ Review before external use:
 - The source-passage matcher is heuristic and local-only.
 - Page locators depend on parser quality and may require manual review.
 - A fallback preview PDF is not a LaTeX compilation and is not submission-ready.
-- ResearchAgent does not verify DOI, citation metadata, p-values, causal conclusions, or peer review status automatically.
+- ResearchAgent does not automatically verify DOI, citation metadata, p-values, causal conclusions, or peer review status.

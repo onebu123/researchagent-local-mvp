@@ -75,6 +75,8 @@ export function ReferenceVerificationPanel({
               <option value="mock_fixture">mock_fixture</option>
               <option value="crossref_optional">crossref_optional</option>
               <option value="semantic_scholar_optional">semantic_scholar_optional</option>
+              <option value="openalex_optional">openalex_optional</option>
+              <option value="arxiv_optional">arxiv_optional</option>
               <option value="pubmed_optional">pubmed_optional</option>
             </select>
             <button className="primary-button" onClick={onRun} disabled={actionLoading}>

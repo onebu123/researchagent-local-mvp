@@ -595,6 +595,8 @@ class ReferenceVerificationRunRequest(BaseModel):
         "mock_fixture",
         "crossref_optional",
         "semantic_scholar_optional",
+        "openalex_optional",
+        "arxiv_optional",
         "pubmed_optional",
     ] = "mock_fixture"
 

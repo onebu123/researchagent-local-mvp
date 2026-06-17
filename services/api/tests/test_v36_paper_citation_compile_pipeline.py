@@ -23,6 +23,7 @@ from app.tools.auto_scientist.paper_compile import (
 from app.tools.auto_scientist.scientist_loop import run_auto_scientist
 from app.tools.evidence_trust_package import build_evidence_trust_package
 from app.tools.human_review_queue import build_human_review_queue
+from app.tools.reference_verification import run_reference_verification
 
 
 def _ensure_demo_project_record() -> None:
@@ -51,6 +52,7 @@ def _make_auto_scientist_paper(project_dir: Path) -> None:
 
 def test_paper_citation_binding_artifacts_queue_and_trust_package(demo_project_dir: Path) -> None:
     _make_auto_scientist_paper(demo_project_dir)
+    run_reference_verification(demo_project_dir, "demo_project", provider="mock_fixture")
 
     payload = generate_paper_citation_bindings(demo_project_dir, "demo_project", top_k=3)
 
@@ -62,6 +64,9 @@ def test_paper_citation_binding_artifacts_queue_and_trust_package(demo_project_d
     first_claim = next(item for item in payload["bindings"] if item["claim_like"])
     assert "citation_support_status" in first_claim
     assert "matched_source_passages" in first_claim
+    assert "reference_verifications" in first_claim
+    assert payload["summary"]["reference_verification_candidates"] >= 1
+    assert first_claim["citation_support_status"] != "formal_reference_available"
     assert "recommended_action" in first_claim
 
     assert (demo_project_dir / PAPER_CITATION_BINDINGS_JSON).exists()
