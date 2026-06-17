@@ -720,6 +720,7 @@ class AutoScientistRunRequest(BaseModel):
     retrieval_mode: RetrievalMode = "local_hybrid_fts"
     write_paper: bool = True
     export_latex: bool = True
+    copilot_mode: Literal["off", "advisory", "strict"] = "off"
     allow_generated_code_experiments: bool = False
     generated_code_timeout_seconds: int = Field(default=5, ge=1, le=30)
     generated_code_max_memory_mb: int = Field(default=512, ge=64, le=2048)

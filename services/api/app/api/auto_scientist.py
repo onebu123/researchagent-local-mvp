@@ -23,6 +23,7 @@ from app.services.storage_service import storage_service
 from app.tools.auto_scientist.idea_generator import generate_scientist_ideas, read_scientist_ideas
 from app.tools.auto_scientist.scientist_loop import read_auto_scientist_status, run_auto_scientist
 from app.tools.auto_scientist.contracts import RUNS_JSONL, read_jsonl
+from app.tools.auto_scientist.phase_gates import read_phase_gates
 from app.tools.auto_scientist.experiment_claim_binding import (
     generate_experiment_claim_bindings,
     read_experiment_claim_bindings,
@@ -130,6 +131,7 @@ def create_auto_scientist_run(
             retrieval_mode=request_payload.retrieval_mode,
             write_paper=request_payload.write_paper,
             export_latex=request_payload.export_latex,
+            copilot_mode=request_payload.copilot_mode,
             allow_generated_code_experiments=request_payload.allow_generated_code_experiments,
             generated_code_timeout_seconds=request_payload.generated_code_timeout_seconds,
             generated_code_max_memory_mb=request_payload.generated_code_max_memory_mb,
@@ -153,6 +155,17 @@ def create_auto_scientist_run(
 def get_auto_scientist_status(project_id: str) -> dict[str, Any]:
     try:
         return read_auto_scientist_status(project_id)
+    except Exception as exc:
+        raise _handle_tool_error(exc) from exc
+
+
+@router.get("/projects/{project_id}/auto-scientist/phase-gates")
+def get_auto_scientist_phase_gates(project_id: str) -> dict[str, Any]:
+    try:
+        payload = read_phase_gates(_project_dir(project_id))
+        if not payload:
+            raise HTTPException(status_code=404, detail="auto_scientist/phase_gates.json does not exist")
+        return payload
     except Exception as exc:
         raise _handle_tool_error(exc) from exc
 

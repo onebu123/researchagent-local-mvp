@@ -319,6 +319,8 @@ export type AutoScientistRun = {
   analysis: Record<string, unknown>;
   review: Record<string, unknown>;
   autonomous_paper_outputs?: Record<string, unknown>;
+  phase_gates?: Record<string, unknown>;
+  awaiting_human_review?: boolean;
 };
 
 export type AutoScientistStatus = {
@@ -327,6 +329,7 @@ export type AutoScientistStatus = {
   experiment_plan: Record<string, unknown>;
   analysis: Record<string, unknown>;
   review: Record<string, unknown>;
+  phase_gates?: Record<string, unknown>;
   latest_run: Record<string, unknown>;
   run_count: number;
   limitations: string[];
@@ -335,6 +338,7 @@ export type AutoScientistStatus = {
   experiment_tree_search_enabled?: boolean;
   generated_code_revision_loop_enabled?: boolean;
   generated_code_strategy?: string;
+  copilot_mode?: "off" | "advisory" | "strict" | string;
   experiment_tree?: Record<string, unknown>;
 };
 

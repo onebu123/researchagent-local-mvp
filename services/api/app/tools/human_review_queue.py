@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from app.tools.audit_log import append_audit_event
+from app.tools.auto_scientist.phase_gates import PHASE_GATES_JSON
 from app.tools.file_tools import ensure_dir, write_json
 from app.tools.literature_index import load_literature_index
 
@@ -198,6 +199,34 @@ def _revision_patch_items(project_dir: Path) -> list[dict[str, Any]]:
                 "patch",
                 patch_id,
                 "approve_reject_or_edit_patch",
+            )
+        )
+    return items
+
+
+def _phase_gate_items(project_dir: Path) -> list[dict[str, Any]]:
+    payload = _read_json(project_dir / PHASE_GATES_JSON, {})
+    if not isinstance(payload, dict):
+        return []
+    items: list[dict[str, Any]] = []
+    for gate in payload.get("gates", []):
+        if not isinstance(gate, dict) or gate.get("human_review_required") is not True:
+            continue
+        review_id = str(gate.get("review_id") or "")
+        phase = str(gate.get("phase") or "phase")
+        if not review_id:
+            continue
+        items.append(
+            _item(
+                review_id,
+                "auto_scientist_phase_gate",
+                str(gate.get("severity") or "warning"),
+                str(gate.get("title") or f"Copilot phase gate: {phase}"),
+                str(gate.get("description") or "Copilot phase gate requires local human review."),
+                str(gate.get("artifact_path") or PHASE_GATES_JSON),
+                "auto_scientist_phase_gate",
+                phase,
+                str(gate.get("recommended_action") or "approve_or_reject_phase_gate"),
             )
         )
     return items
@@ -604,6 +633,7 @@ def build_human_review_queue(project_dir: Path, project_id: str) -> dict[str, An
         *_claim_audit_items(project_dir),
         *_reviewer_items(project_dir),
         *_revision_patch_items(project_dir),
+        *_phase_gate_items(project_dir),
         *_auto_scientist_items(project_dir),
     ]
     decisions = _decision_by_review_id(project_dir)
