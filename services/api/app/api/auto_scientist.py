@@ -11,9 +11,10 @@ from app.schemas import (
     AutoScientistGeneratedCodeApprovalRequest,
     AutoScientistGeneratedCodeRerunRequest,
     AutoScientistIdeaRequest,
-    AutoScientistPaperRewriteRequest,
     AutoScientistPaperCitationBindingRequest,
     AutoScientistPaperCompileRequest,
+    AutoScientistPaperDocxExportRequest,
+    AutoScientistPaperRewriteRequest,
     AutoScientistRunRequest,
     AutoScientistTreeRevisionApplyRequest,
     AutoScientistTreeRevisionPlanRequest,
@@ -35,6 +36,7 @@ from app.tools.auto_scientist.paper_compile import (
     compile_auto_scientist_paper,
     read_paper_compile_report,
 )
+from app.tools.paper_writer.docx_export import export_auto_scientist_paper_docx
 from app.tools.auto_scientist.generated_code_approval import (
     list_generated_code_proposals,
     read_generated_code_approvals,
@@ -262,6 +264,22 @@ def compile_auto_scientist_paper_endpoint(
             engine=request_payload.engine,
             timeout_seconds=request_payload.timeout_seconds,
             generate_preview_pdf=request_payload.generate_preview_pdf,
+        )
+    except Exception as exc:
+        raise _handle_tool_error(exc) from exc
+
+
+@router.post("/projects/{project_id}/auto-scientist/paper-export-docx")
+def export_auto_scientist_paper_docx_endpoint(
+    project_id: str,
+    payload: AutoScientistPaperDocxExportRequest | None = None,
+) -> dict[str, Any]:
+    request_payload = payload or AutoScientistPaperDocxExportRequest()
+    try:
+        return export_auto_scientist_paper_docx(
+            _project_dir(project_id),
+            project_id,
+            manuscript_relative_path=request_payload.manuscript_relative_path,
         )
     except Exception as exc:
         raise _handle_tool_error(exc) from exc

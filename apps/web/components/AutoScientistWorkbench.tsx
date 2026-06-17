@@ -25,6 +25,7 @@ import {
   createAutoScientistPaperCitationBindings,
   compileAutoScientistPaper,
   createAutoScientistTreeRevisionPlan,
+  exportAutoScientistPaperDocx,
   getAutoScientistExperimentTree,
   getAutoScientistExperimentClaimBindings,
   getAutoScientistPaperCitationBindings,
@@ -55,6 +56,7 @@ import type {
   AutoScientistStatus,
   AutoScientistTreeRevisionPlan,
   HumanReviewQueue,
+  PaperDocxExport,
   ProjectJob,
   ProjectJobEvents,
   ProjectJobLog,
@@ -395,6 +397,7 @@ export function AutoScientistWorkbench() {
   const [apiMode, setApiMode] = useState<"live" | "mock">("live");
   const [approvalReason, setApprovalReason] = useState("Reviewed static scan, source hash, and sandbox policy.");
   const [activeTab, setActiveTab] = useState<TabKey>("ideas");
+  const [paperDocxExport, setPaperDocxExport] = useState<PaperDocxExport | null>(null);
 
   const currentJob = useMemo(() => latestJob(snapshot.jobs), [snapshot.jobs]);
   const proposalsPending = useMemo(() => pendingProposals(snapshot.proposals), [snapshot.proposals]);
@@ -740,6 +743,22 @@ export function AutoScientistWorkbench() {
     }
   }
 
+  async function exportPaperDocx() {
+    setBusyAction("paper-docx-export");
+    try {
+      const payload = await exportAutoScientistPaperDocx(projectId);
+      setPaperDocxExport(payload);
+      setApiMode("live");
+      setActiveTab("paper");
+      setMessage("Exported Auto Scientist DOCX draft. Treat it as a human-review artifact, not citation proof.");
+      await refresh(projectId);
+    } catch (error) {
+      setMessage(error instanceof Error ? `Could not export DOCX draft: ${error.message}` : "Could not export DOCX draft.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   async function applyTreeRevision() {
     setBusyAction("apply-tree-revision");
     try {
@@ -1066,6 +1085,7 @@ export function AutoScientistWorkbench() {
                     <button type="button" className="rounded-md border border-emerald-300 px-3 py-2 text-xs font-bold text-emerald-700 disabled:opacity-60" disabled={busyAction === "experiment-claim-bindings"} onClick={() => void generateExperimentBindings()}>Bind claims to experiments</button>
                     <button type="button" className="rounded-md border border-sky-300 px-3 py-2 text-xs font-bold text-sky-700 disabled:opacity-60" disabled={busyAction === "paper-citation-bindings"} onClick={() => void generateCitationBindings()}>Bind citations</button>
                     <button type="button" className="rounded-md border border-purple-300 px-3 py-2 text-xs font-bold text-purple-700 disabled:opacity-60" disabled={busyAction === "paper-compile"} onClick={() => void runPaperCompile()}>Compile / preview PDF</button>
+                    <button type="button" className="rounded-md border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-60" disabled={busyAction === "paper-docx-export"} onClick={() => void exportPaperDocx()}>Export DOCX draft</button>
                   </div>
                 </div>
               </div>
@@ -1122,12 +1142,24 @@ export function AutoScientistWorkbench() {
                   </div>
                 </div>
               )}
+              {paperDocxExport && (
+                <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <strong>DOCX draft export:</strong> {paperDocxExport.docx_file}
+                      <p className="mt-1 text-xs text-slate-600">DOCX export is a draft artifact for human review. It does not verify citations or upgrade the evidence trust package.</p>
+                    </div>
+                    <span className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-bold">{paperDocxExport.artifact.sha256?.slice(0, 12) || "no hash"}</span>
+                  </div>
+                </div>
+              )}
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="rounded-lg border border-slate-200 p-4">
                   <h4 className="font-black text-slate-950">Manuscript artifacts</h4>
                   <ul className="mt-3 space-y-2 text-sm text-slate-700">
                     <li><strong>Markdown:</strong> {manuscriptFile || "manuscript/auto_scientist_paper.md will appear after a successful run"}</li>
                     <li><strong>LaTeX:</strong> {latexFile || "manuscript/auto_scientist_paper.tex will appear after export"}</li>
+                    <li><strong>DOCX:</strong> {paperDocxExport?.docx_file || "manuscript/auto_scientist_paper.docx will appear after DOCX export"}</li>
                     <li><strong>Latest run:</strong> {getRecordString(latestRun, "run_id") || "—"}</li>
                     <li><strong>Strategy:</strong> {getRecordString(latestRun, "generated_code_strategy") || status?.generated_code_strategy || "—"}</li>
                   </ul>

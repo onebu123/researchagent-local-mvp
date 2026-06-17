@@ -5,6 +5,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 
 from app.schemas import (
+    PaperWriterDocxExportRequest,
     PaperWriterDraftRequest,
     PaperWriterLatexExportRequest,
     PaperWriterOutlineRequest,
@@ -12,6 +13,7 @@ from app.schemas import (
 )
 from app.services.project_service import ProjectNotFoundError, project_service
 from app.services.storage_service import storage_service
+from app.tools.paper_writer.docx_export import export_draft_docx, read_docx_export_status
 from app.tools.paper_writer.latex_export import export_draft_latex, read_latex_export_status
 from app.tools.paper_writer.outline_builder import generate_paper_outline, read_paper_outline
 from app.tools.paper_writer.paper_plan import generate_paper_plan, read_paper_plan
@@ -142,6 +144,17 @@ def create_paper_writer_latex(
         raise _handle_tool_error(exc) from exc
 
 
+@router.post("/projects/{project_id}/paper-writer/export-docx")
+def create_paper_writer_docx(
+    project_id: str,
+    _payload: PaperWriterDocxExportRequest | None = None,
+) -> dict[str, Any]:
+    try:
+        return export_draft_docx(_project_dir(project_id), project_id)
+    except Exception as exc:
+        raise _handle_tool_error(exc) from exc
+
+
 @router.get("/projects/{project_id}/paper-writer/status")
 def get_paper_writer_status(project_id: str) -> dict[str, Any]:
     project_dir = _project_dir(project_id)
@@ -151,5 +164,6 @@ def get_paper_writer_status(project_id: str) -> dict[str, Any]:
         "outline": {"available": bool(read_paper_outline(project_dir)), "relative_path": "manuscript/outline.json"},
         "draft": read_full_draft_status(project_dir),
         "latex": read_latex_export_status(project_dir),
+        "docx": read_docx_export_status(project_dir),
         "safety_smoke": evaluate_auto_paper_draft(project_dir),
     }
