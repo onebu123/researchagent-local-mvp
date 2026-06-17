@@ -739,12 +739,45 @@ export type PaperWriterLatexExport = {
   limitations: string[];
 };
 
+export type PaperDocxExportArtifact = {
+  artifact_type: string;
+  relative_path: string;
+  mime_type: string;
+  available: boolean;
+  required: boolean;
+  size_bytes: number;
+  sha256: string | null;
+};
+
+export type PaperDocxExport = {
+  schema_version: string;
+  project_id: string;
+  created_at: string;
+  export_kind: string;
+  source_markdown_file: string;
+  docx_file: string;
+  manifest_file: string;
+  artifact: PaperDocxExportArtifact;
+  source: PaperDocxExportArtifact;
+  safety: {
+    project_relative_paths_only: boolean;
+    secret_scan_passed: boolean;
+    warning_count: number;
+  };
+  warnings: string[];
+  caveats: string[];
+  is_draft_artifact: boolean;
+  citation_proof: boolean;
+  evidence_trust_package_citation_proof: boolean;
+};
+
 export type PaperWriterStatus = {
   project_id: string;
   plan: Record<string, unknown>;
   outline: Record<string, unknown>;
   draft: Record<string, unknown>;
   latex: Record<string, unknown>;
+  docx?: Record<string, unknown>;
   safety_smoke: Record<string, unknown>;
 };
 

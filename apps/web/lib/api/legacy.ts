@@ -90,6 +90,7 @@ import type {
   PaperWriterOutline,
   PaperWriterDraft,
   PaperWriterLatexExport,
+  PaperDocxExport,
   PaperWriterStatus,
   ProjectExportInfo,
   ProjectDetail,
@@ -412,6 +413,16 @@ export async function compileAutoScientistPaper(
   });
 }
 
+export async function exportAutoScientistPaperDocx(
+  projectId: string,
+  payload: { manuscript_relative_path?: string | null } = {}
+): Promise<PaperDocxExport> {
+  return request<PaperDocxExport>(`/api/projects/${projectId}/auto-scientist/paper-export-docx`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
 
 export async function getAutoScientistTreeRevisionPlan(projectId: string): Promise<AutoScientistTreeRevisionPlan> {
   return request<AutoScientistTreeRevisionPlan>(`/api/projects/${projectId}/auto-scientist/experiment-tree/revision-plan`);
@@ -518,6 +529,13 @@ export async function exportPaperWriterLatex(projectId: string): Promise<PaperWr
   return request<PaperWriterLatexExport>(`/api/projects/${projectId}/paper-writer/export-latex`, {
     method: "POST",
     body: JSON.stringify({ compile_pdf: false })
+  });
+}
+
+export async function exportPaperWriterDocx(projectId: string): Promise<PaperDocxExport> {
+  return request<PaperDocxExport>(`/api/projects/${projectId}/paper-writer/export-docx`, {
+    method: "POST",
+    body: JSON.stringify({})
   });
 }
 

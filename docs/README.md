@@ -20,6 +20,7 @@ This directory contains current project-facing documentation plus archived miles
 - [Roadmap](roadmap.md): v3.0.0-rc1 through v3.0 goals, deliverables, acceptance criteria, and non-goals.
 - [Demo walkthrough](demo_walkthrough.md): local mock/offline demo flow and expected artifacts.
 - [GitHub release checklist](github_release_checklist.md): source/evidence package and repository hygiene checks.
+- [Maintainer runbook](maintainer_runbook.md): release checks, provider usage, failure records, manual review, and prohibited claims.
 - [Deployment scaffold](deployment_v2.md): optional local planning scaffold for future deployment work.
 - [Local MVP limitations](local_mvp_limitations.md): what the current system does not guarantee.
 - [User guide](user_guide.md): current local workspace usage notes.

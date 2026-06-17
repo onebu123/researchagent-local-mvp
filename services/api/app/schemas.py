@@ -697,6 +697,10 @@ class PaperWriterLatexExportRequest(BaseModel):
     compile_pdf: bool = False
 
 
+class PaperWriterDocxExportRequest(BaseModel):
+    pass
+
+
 class AutoScientistIdeaRequest(BaseModel):
     topic: str | None = Field(default=None, max_length=240)
     research_question: str | None = Field(default=None, max_length=1000)
@@ -937,6 +941,24 @@ class AutoScientistPaperCompileRequest(BaseModel):
             raise ValueError("manuscript_tex_relative_path must stay inside project")
         if not cleaned.startswith("manuscript/") or not cleaned.endswith(".tex"):
             raise ValueError("manuscript_tex_relative_path must be a .tex file under manuscript/")
+        return cleaned
+
+
+class AutoScientistPaperDocxExportRequest(BaseModel):
+    manuscript_relative_path: str | None = Field(default=None, max_length=240)
+
+    @field_validator("manuscript_relative_path")
+    @classmethod
+    def validate_manuscript_relative_path(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip().replace("\\", "/")
+        if not cleaned:
+            return None
+        if cleaned.startswith("/") or ".." in cleaned.split("/"):
+            raise ValueError("manuscript_relative_path must stay inside project")
+        if not cleaned.startswith("manuscript/") or not cleaned.endswith(".md"):
+            raise ValueError("manuscript_relative_path must be a Markdown file under manuscript/")
         return cleaned
 
 
