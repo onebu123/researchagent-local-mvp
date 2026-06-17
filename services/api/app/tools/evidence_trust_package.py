@@ -51,6 +51,7 @@ CANDIDATE_FILES = [
     "jobs/latest_job.json",
     "auto_scientist/experiment_tree.json",
     "auto_scientist/experiment_tree.md",
+    "auto_scientist/experiment_tree_failures.jsonl",
     "auto_scientist/experiment_tree_selection.json",
     "auto_scientist/experiment_tree_reruns.jsonl",
     "auto_scientist/paper_rewrites.jsonl",

@@ -179,6 +179,12 @@ def generate_auto_scientist_paper(
                 else "No human-selected experiment tree node was recorded."
             ),
             "",
+            (
+                f"Best-node selection rationale: {emphasized_node.get('selection_rationale', 'not available')}"
+                if experiment_tree
+                else "Best-node selection rationale was not generated because experiment tree search was disabled."
+            ),
+            "",
             "## Evidence-Bound Claims",
             "",
             f"Claim support counts from local result artifacts: `{support_counts}`.",

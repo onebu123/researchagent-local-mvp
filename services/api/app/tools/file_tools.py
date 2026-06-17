@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -31,4 +32,22 @@ def read_text_files(folder: Path, suffixes: set[str]) -> list[tuple[Path, str]]:
 
 
 def relative_posix(path: Path, root: Path) -> str:
-    return path.resolve().relative_to(root.resolve()).as_posix()
+    path_text = _strip_windows_extended_prefix(str(path.resolve()))
+    root_text = _strip_windows_extended_prefix(str(root.resolve()))
+    resolved_path = Path(path_text)
+    resolved_root = Path(root_text)
+    try:
+        return resolved_path.relative_to(resolved_root).as_posix()
+    except ValueError:
+        relative = os.path.relpath(str(resolved_path), str(resolved_root))
+        if relative == os.pardir or relative.startswith(os.pardir + os.sep) or os.path.isabs(relative):
+            raise
+        return Path(relative).as_posix()
+
+
+def _strip_windows_extended_prefix(value: str) -> str:
+    if value.startswith("\\\\?\\UNC\\"):
+        return "\\\\" + value[8:]
+    if value.startswith("\\\\?\\"):
+        return value[4:]
+    return value

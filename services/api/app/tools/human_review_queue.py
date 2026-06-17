@@ -369,11 +369,11 @@ def _auto_scientist_items(project_dir: Path) -> list[dict[str, Any]]:
                 "auto_scientist",
                 "warning",
                 "Experiment tree search requires review",
-                "Agentic experiment tree search selected candidates using a local heuristic score. Review the tree, best node, and child experiment outputs before relying on the result.",
+                "Agentic experiment tree search selected candidates using a local heuristic score. Review score breakdowns, failure isolation records, best-node rationale, and child experiment outputs before relying on the result.",
                 "auto_scientist/experiment_tree.json",
                 "auto_scientist_experiment_tree",
                 "experiment_tree_search",
-                "review_tree_scores_and_best_node",
+                "review_score_breakdown_failure_isolation_and_best_node_rationale",
             )
         )
     tree_selection = _read_json(project_dir / "auto_scientist" / "experiment_tree_selection.json", {})
