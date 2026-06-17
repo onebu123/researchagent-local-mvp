@@ -24,6 +24,7 @@ apps/web/playwright/.cache/
 test-results/
 playwright-report/
 evidence_logs/
+reports/
 projects/
 projects/*/exports/
 projects/**/.env

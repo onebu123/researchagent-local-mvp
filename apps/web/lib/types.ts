@@ -185,6 +185,569 @@ export type WorkspaceExportManifest = {
   message?: string;
 };
 
+export type ClaimAuditItem = {
+  claim_audit_id: string;
+  section: string;
+  paragraph_index: number;
+  sentence_index: number;
+  sentence: string;
+  answer_support_status: "supported" | "weakly_supported" | "unsupported" | string;
+  matched_source_passages: RAGSourcePassage[];
+  unsupported_notes: string[];
+  evidence_warning_flags: string[];
+  recommended_action: string;
+  human_review_required: boolean;
+  rag_answer_id?: string;
+  retrieval_mode: string;
+  top_source_score: number;
+};
+
+export type ClaimAuditReport = {
+  project_id: string;
+  created_at: string;
+  manuscript_file: string;
+  claim_audit_file: string;
+  claim_audit_markdown_file: string;
+  retrieval_mode: string;
+  top_k: number;
+  total_claims_checked: number;
+  summary: Record<string, number>;
+  human_review_required_count: number;
+  claim_audits: ClaimAuditItem[];
+  limitations: string[];
+};
+
+export type HumanReviewItem = {
+  review_id: string;
+  review_type: string;
+  severity: "blocking" | "warning" | "info" | string;
+  title: string;
+  description: string;
+  artifact_path: string;
+  entity_type: string;
+  entity_id: string;
+  recommended_action: string;
+  status: string;
+  created_at: string;
+  decided_at: string | null;
+  decision_reason: string;
+  human_review_required: boolean;
+};
+
+export type HumanReviewQueue = {
+  project_id: string;
+  generated_at: string;
+  relative_path: string;
+  items: HumanReviewItem[];
+  summary: Record<string, number>;
+  limitations: string[];
+};
+
+export type RevisionPlanPatchSuggestion = {
+  patch_id: string;
+  source_issue_id?: string;
+  claim_audit_id?: string;
+  section?: string;
+  paragraph_index?: number;
+  sentence_index?: number;
+  original_sentence: string;
+  suggested_sentence: string;
+  reason: string;
+  evidence_basis: string[];
+  risk_level: string;
+  requires_human_approval: boolean;
+  status: string;
+  answer_support_status: string;
+};
+
+export type RevisionPlan = {
+  project_id: string;
+  created_at: string;
+  manuscript_file: string;
+  revision_plan_file: string;
+  revision_plan_markdown_file: string;
+  patch_suggestions_file: string;
+  claim_audit_file: string;
+  human_approval_required: boolean;
+  patch_suggestions: RevisionPlanPatchSuggestion[];
+  limitations: string[];
+};
+
+export type EvidenceTrustPackageFile = {
+  relative_path: string;
+  artifact_kind: string;
+  size_bytes: number;
+  sha256: string;
+};
+
+export type EvidenceTrustPackage = {
+  package_type: string;
+  project_id: string;
+  generated_at?: string;
+  relative_path: string;
+  package_file: string;
+  files: EvidenceTrustPackageFile[];
+  warnings: string[];
+  exclusions: string[];
+  limitations: string[];
+  available?: boolean;
+  size_bytes?: number;
+  package_sha256?: string;
+};
+
+
+export type AutoScientistIdeas = {
+  schema_version: string;
+  project_id: string;
+  created_at: string;
+  topic: string;
+  research_question: string;
+  mode: string;
+  arbitrary_code_execution: boolean;
+  evidence_summary: Record<string, unknown>;
+  ideas: Array<Record<string, unknown>>;
+  limitations: string[];
+};
+
+export type AutoScientistRun = {
+  run: Record<string, unknown>;
+  ideas: AutoScientistIdeas;
+  experiment_plan: Record<string, unknown>;
+  experiment_results: Array<Record<string, unknown>>;
+  experiment_tree?: Record<string, unknown>;
+  generated_code_revision?: Record<string, unknown>;
+  analysis: Record<string, unknown>;
+  review: Record<string, unknown>;
+  autonomous_paper_outputs?: Record<string, unknown>;
+};
+
+export type AutoScientistStatus = {
+  project_id: string;
+  ideas: Record<string, unknown>;
+  experiment_plan: Record<string, unknown>;
+  analysis: Record<string, unknown>;
+  review: Record<string, unknown>;
+  latest_run: Record<string, unknown>;
+  run_count: number;
+  limitations: string[];
+  generated_code_experiments_enabled?: boolean;
+  sandboxed_generated_code?: boolean;
+  experiment_tree_search_enabled?: boolean;
+  generated_code_revision_loop_enabled?: boolean;
+  generated_code_strategy?: string;
+  experiment_tree?: Record<string, unknown>;
+};
+
+export type ProjectJob = {
+  schema_version: string;
+  project_id: string;
+  job_id: string;
+  job_type: string;
+  status: "queued" | "running" | "completed" | "failed" | "cancelled" | string;
+  progress: number;
+  current_step: string;
+  created_at?: string;
+  started_at?: string;
+  completed_at?: string | null;
+  payload?: Record<string, unknown>;
+  outputs?: string[];
+  errors?: Array<Record<string, unknown>>;
+  result?: Record<string, unknown> | null;
+  cancel_requested?: boolean;
+  cancelled_at?: string | null;
+  execution_mode?: "synchronous" | "background" | string;
+  limitations?: string[];
+};
+
+export type ProjectJobEvent = {
+  schema_version: string;
+  sequence: number;
+  project_id: string;
+  job_id: string;
+  job_type: string;
+  event_type: string;
+  status?: string;
+  progress?: number;
+  current_step?: string;
+  message: string;
+  created_at: string;
+  cancel_requested?: boolean;
+  details?: Record<string, unknown>;
+};
+
+export type ProjectJobEvents = {
+  schema_version: string;
+  project_id: string;
+  job_id: string;
+  events_file: string;
+  events: ProjectJobEvent[];
+  latest_sequence: number;
+  returned: number;
+};
+
+export type ProjectJobLog = {
+  project_id: string;
+  job_id: string;
+  relative_path: string;
+  content: string;
+};
+
+
+export type AutoScientistGeneratedCodeProposal = {
+  schema_version: string;
+  project_id?: string;
+  run_id: string;
+  experiment_id: string;
+  created_at?: string;
+  relative_path: string;
+  source_file?: string;
+  input_file?: string;
+  source_hash: string;
+  source_mode?: string;
+  generated_code_strategy?: string;
+  human_approval_recommended: boolean;
+  static_scan: Record<string, unknown>;
+  static_scan_safe: boolean;
+  approval_decision?: "approved" | "rejected" | null;
+  approval_id?: string | null;
+  approval_reason?: string | null;
+  source_excerpt: string;
+  safety_notes: string[];
+};
+
+export type AutoScientistGeneratedCodeApproval = {
+  schema_version: string;
+  approval_id: string;
+  project_id: string;
+  run_id: string;
+  experiment_id: string;
+  source_hash: string;
+  decision: "approved" | "rejected";
+  reason: string;
+  reviewer: string;
+  created_at: string;
+  human_review_required: boolean;
+};
+
+
+export type AutoScientistGeneratedCodeRerun = {
+  rerun: Record<string, unknown>;
+  result: Record<string, unknown>;
+};
+
+
+export type AutoScientistExperimentTreeNode = {
+  node_id: string;
+  parent_node_id?: string | null;
+  depth?: number;
+  experiment_id?: string;
+  template_name?: string;
+  status?: string;
+  score?: number;
+  generated_code_execution?: boolean;
+  output_files?: string[];
+  metric_keys?: string[];
+  claim_count?: number;
+  support_status_counts?: Record<string, number>;
+  source_hash?: string | null;
+  approval_required?: boolean | null;
+  tree_node_rerun?: boolean;
+  rerun_id?: string;
+};
+
+export type AutoScientistExperimentTree = {
+  schema_version?: string;
+  project_id?: string;
+  run_id?: string;
+  experiment_tree_file?: string;
+  selection_file?: string;
+  tree_search_enabled?: boolean;
+  strategy?: string;
+  node_count: number;
+  edge_count?: number;
+  best_node?: AutoScientistExperimentTreeNode | null;
+  selected_best_node?: AutoScientistExperimentTreeNode | null;
+  selected_best_node_id?: string | null;
+  selected_reason?: string | null;
+  nodes: AutoScientistExperimentTreeNode[];
+  edges?: Array<Record<string, string>>;
+  limitations?: string[];
+};
+
+export type AutoScientistExperimentTreeSelection = {
+  schema_version: string;
+  project_id: string;
+  experiment_tree_file: string;
+  latest_selection: Record<string, unknown>;
+  history: Array<Record<string, unknown>>;
+};
+
+export type AutoScientistExperimentTreeRerun = {
+  schema_version: string;
+  project_id: string;
+  source_node_id: string;
+  rerun_id: string;
+  rerun_node?: AutoScientistExperimentTreeNode;
+  results: Array<Record<string, unknown>>;
+  limitations: string[];
+};
+
+export type AutoScientistPaperRewrite = {
+  schema_version: string;
+  project_id: string;
+  run_id: string;
+  selected_node_id?: string | null;
+  paper_file?: string;
+  latex_file?: string;
+  audit_file?: string;
+  human_review_required: boolean;
+  limitations: string[];
+};
+
+
+export type AutoScientistExperimentClaimBinding = {
+  binding_id: string;
+  manuscript_file?: string;
+  section: string;
+  paragraph_index: number;
+  sentence_index: number;
+  sentence: string;
+  is_claim_like?: boolean;
+  claim_like?: boolean;
+  binding_status: "bound" | "weak_binding" | "weakly_bound" | "unbound" | "not_claim" | "not_experiment_claim" | string;
+  claim_support_status?: "supported" | "weakly_supported" | "unsupported" | "not_claim" | "needs_human_review" | string;
+  support_status?: "supported" | "weakly_supported" | "unsupported" | "needs_human_review" | string;
+  experiment_node_id?: string | null;
+  matched_node_id?: string | null;
+  experiment_id?: string | null;
+  matched_experiment_id?: string | null;
+  bound_experiment_ids?: string[];
+  bound_tree_node_ids?: string[];
+  template_name?: string | null;
+  matched_template_name?: string | null;
+  result_status?: string | null;
+  matched_experiment_status?: string | null;
+  result_file?: string | null;
+  metric_keys: string[];
+  output_files: string[];
+  evidence_artifacts?: string[];
+  source_artifacts?: {
+    experiment_result_file?: string | null;
+    metrics_file?: string | null;
+    summary_file?: string | null;
+    output_files: string[];
+  };
+  source_hash?: string | null;
+  generated_code_execution: boolean;
+  match_score?: number;
+  confidence?: number;
+  matched_terms: string[];
+  match_reasons?: string[];
+  evidence_warning_flags?: string[];
+  binding_warning_flags?: string[];
+  binding_warning_notes?: string[];
+  human_review_required: boolean;
+  recommended_action: string;
+};
+
+export type AutoScientistExperimentClaimBindings = {
+  schema_version: string;
+  project_id: string;
+  created_at: string;
+  reason?: string;
+  manuscript_file: string;
+  experiment_tree_file?: string | null;
+  latest_run_file?: string | null;
+  selected_node_id?: string | null;
+  binding_file: string;
+  bindings_file?: string;
+  binding_markdown_file: string;
+  bindings_markdown_file?: string;
+  claim_trace_file?: string;
+  latest_binding_file?: string;
+  experiment_record_count: number;
+  evidence_unit_count?: number;
+  summary: Record<string, number>;
+  bindings: AutoScientistExperimentClaimBinding[];
+  sentence_bindings?: AutoScientistExperimentClaimBinding[];
+  limitations: string[];
+};
+
+export type AutoScientistTreeRevisionPatch = {
+  patch_id: string;
+  review_id?: string;
+  target_file?: string;
+  patch_type?: string;
+  section_title?: string;
+  suggested_text?: string;
+  reason?: string;
+  risk_level?: string;
+  requires_human_approval?: boolean;
+  status?: string;
+};
+
+export type AutoScientistTreeRevisionPlan = {
+  schema_version: string;
+  project_id: string;
+  created_at?: string;
+  experiment_tree_file?: string;
+  source_paper_file?: string;
+  revision_plan_file?: string;
+  patch_suggestions_file?: string;
+  revised_paper_file?: string;
+  revised_latex_file?: string;
+  selected_node_id?: string | null;
+  selected_node?: AutoScientistExperimentTreeNode | null;
+  critiques: Array<Record<string, unknown>>;
+  patch_suggestions: AutoScientistTreeRevisionPatch[];
+  human_approval_required: boolean;
+  limitations: string[];
+};
+
+export type AutoScientistTreeRevisionApplication = {
+  schema_version: string;
+  project_id: string;
+  created_at: string;
+  source_plan_file: string;
+  source_paper_file: string;
+  revised_paper_file: string;
+  revised_latex_file: string;
+  applied_patch_ids: string[];
+  reason?: string;
+  human_approval_required: boolean;
+  human_approval_satisfied: boolean;
+  rerun_claim_audit: boolean;
+  claim_audit_file?: string | null;
+  claim_audit_summary?: Record<string, number> | null;
+  claim_audit_error?: string | null;
+  trust_package_regenerated: boolean;
+  trust_package_file?: string;
+  limitations: string[];
+};
+
+export type AutoScientistPaperCitationBinding = {
+  citation_binding_id: string;
+  manuscript_file: string;
+  section: string;
+  paragraph_index: number;
+  sentence_index: number;
+  sentence: string;
+  claim_like: boolean;
+  binding_status: "bound" | "weak_binding" | "unbound" | "not_citation_claim" | string;
+  citation_support_status: "formal_reference_available" | "source_passage_only" | "missing_source_passage" | "not_applicable" | string;
+  matched_source_passages: Array<Record<string, unknown>>;
+  literature_ids: string[];
+  formal_reference_literature_ids: string[];
+  suggested_citation_marker: string;
+  citation_warning_flags: string[];
+  human_review_required: boolean;
+  recommended_action: string;
+};
+
+export type AutoScientistPaperCitationBindings = {
+  schema_version: string;
+  project_id: string;
+  generated_at: string;
+  manuscript_file: string;
+  binding_file: string;
+  binding_markdown_file: string;
+  citation_bound_draft_file: string;
+  retrieval_mode: string;
+  top_k: number;
+  references_status_file?: string;
+  bibtex_file?: string;
+  formal_reference_count: number;
+  summary: Record<string, number>;
+  bindings: AutoScientistPaperCitationBinding[];
+  limitations: string[];
+};
+
+export type AutoScientistPaperCompileReport = {
+  schema_version: string;
+  project_id: string;
+  created_at: string;
+  relative_path: string;
+  markdown_report_file: string;
+  source_tex_file: string;
+  engine_requested: string;
+  engine_used?: string | null;
+  compile_status: string;
+  compiled_pdf: boolean;
+  pdf_file?: string | null;
+  preview_pdf_generated: boolean;
+  preview_pdf_file?: string | null;
+  stdout_file?: string | null;
+  stderr_file?: string | null;
+  latex_safety_findings: string[];
+  warnings: string[];
+  limitations: string[];
+};
+
+
+export type PaperWriterPlan = {
+  schema_version: string;
+  project_id: string;
+  created_at: string;
+  paper_plan_file: string;
+  paper_type: string;
+  topic: string;
+  domain: string;
+  title_candidates: string[];
+  research_question: string;
+  thesis_summary: string;
+  target_sections: Array<Record<string, unknown>>;
+  required_evidence: Array<Record<string, unknown>>;
+  available_evidence_summary: Record<string, unknown>;
+  missing_evidence_warnings: string[];
+  human_inputs_required: string[];
+  design_inspirations: string[];
+  limitations: string[];
+};
+
+export type PaperWriterOutline = {
+  schema_version: string;
+  project_id: string;
+  created_at: string;
+  outline_file: string;
+  paper_plan_file: string;
+  paper_type: string;
+  topic: string;
+  research_question?: string;
+  sections: Array<Record<string, unknown>>;
+  summary: Record<string, number>;
+  limitations: string[];
+};
+
+export type PaperWriterDraft = {
+  project_id: string;
+  created_at: string;
+  draft_file: string;
+  writing_audit_file: string;
+  writing_rounds_file: string;
+  sections: Array<Record<string, unknown>>;
+  writing_audit: Record<string, unknown>;
+  claim_audit?: ClaimAuditReport | null;
+  limitations: string[];
+};
+
+export type PaperWriterLatexExport = {
+  project_id: string;
+  created_at: string;
+  latex_file: string;
+  source_markdown_file: string;
+  compiled_pdf: boolean;
+  limitations: string[];
+};
+
+export type PaperWriterStatus = {
+  project_id: string;
+  plan: Record<string, unknown>;
+  outline: Record<string, unknown>;
+  draft: Record<string, unknown>;
+  latex: Record<string, unknown>;
+  safety_smoke: Record<string, unknown>;
+};
+
 export type ProductionScaffoldCapability = {
   name: string;
   mode: string;
@@ -1065,6 +1628,82 @@ export type RunHistory = {
   runs: RunHistoryEntry[];
 };
 
+export type AgentReviewerIssue = {
+  issue_id?: string;
+  severity?: string;
+  message?: string;
+  issue?: string;
+};
+
+export type AgentReviewerRound = {
+  round_id: string;
+  reviewer_name: string;
+  blocking_issues: AgentReviewerIssue[];
+  warnings: string[];
+  suggested_fixes: string[];
+  related_claim_ids: string[];
+  related_source_passages: string[];
+  created_at?: string;
+};
+
+export type AgentRevisionPatch = {
+  patch_id: string;
+  issue_source: string;
+  issue: string;
+  action: string;
+  target_file: string;
+  requires_human_approval: boolean;
+  auto_applied: boolean;
+  related_claim_ids: string[];
+  related_source_passages: string[];
+};
+
+export type AgentIterativeRound = {
+  round_id: string;
+  round_number: number;
+  draft_file: string;
+  revised_file: string;
+  revision_plan_file: string;
+  revision_plan?: {
+    human_approval_required: boolean;
+    patch_count: number;
+    patches: AgentRevisionPatch[];
+  };
+  reviewer_records: AgentReviewerRound[];
+  blocking_issue_count: number;
+  warnings: string[];
+  outputs: string[];
+};
+
+export type AgentIterativeLoopResult = {
+  project_id: string;
+  status: string;
+  mode: string;
+  max_rounds: number;
+  executed_rounds: number;
+  stopped_reason: string;
+  run_history_id?: string;
+  rounds: AgentIterativeRound[];
+  latest_outputs: Record<string, string>;
+  formal_draft_modified: boolean;
+  audit_log_file: string;
+  available?: boolean;
+  message?: string;
+};
+
+export type AgentRunRecord = {
+  project_id: string;
+  run_id: string;
+  round_id: string;
+  round_number: number;
+  created_at: string;
+  status: string;
+  blocking_issue_count: number;
+  stopped: boolean;
+  stop_reason: string | null;
+  outputs: string[];
+};
+
 export type RevisionDiffHumanStatus =
   | "accepted"
   | "rejected"
@@ -1438,9 +2077,23 @@ export type RAGSourcePassage = {
   metadata_status: string | null;
   human_verified: boolean;
   score?: number;
+  fts_score?: number;
+  bm25_score?: number;
+  retrieval_mode?: string;
+  page_start?: number | null;
+  page_end?: number | null;
+  page_quality_signals?: string[];
+  position_label?: string;
+  source_locator?: string;
+  metadata_trust_level?: string;
+  parser_quality_label?: string | null;
+  parser_quality_score?: number | null;
+  evidence_warning_flags?: string[];
   score_breakdown?: {
     keyword_score: number;
     ngram_score: number;
+    fts_score?: number;
+    bm25_score?: number;
     metadata_trust_score: number;
     quality_score: number;
   };
@@ -1549,6 +2202,10 @@ export type LiteratureRAGAnswer = {
   project_id: string;
   question: string;
   answer: string;
+  answer_support_status: "supported" | "weakly_supported" | "unsupported" | string;
+  minimum_support_score?: number;
+  top_source_score?: number;
+  source_passage_count?: number;
   source_passages: RAGSourcePassage[];
   unsupported_notes: string[];
   limitations: string[];

@@ -1,6 +1,6 @@
 # User Guide
 
-This guide describes the current `v2.0.1-dev` local ResearchAgent workspace.
+This guide describes the current `v3.0.0-rc1` local ResearchAgent workspace.
 
 ## First Screen
 
@@ -50,7 +50,7 @@ The web app preserves mock fallback when the backend is unavailable. Mock data m
 
 ## Research Workspace Scaffold
 
-ResearchAgent v2.0 introduced a Research Workspace scaffold for optional PostgreSQL, worker, auth, Docker, and deployment planning. Current `v2.0.1-dev` keeps those defaults local:
+ResearchAgent v2.0 introduced a Research Workspace scaffold for optional PostgreSQL, worker, auth, Docker, and deployment planning. Current `v3.0.0-rc1` keeps those defaults local:
 
 ```bash
 QUEUE_MODE=inline
@@ -68,7 +68,7 @@ python scripts/validate_v2.py
 ## Release Packaging
 
 ```bash
-python scripts/package_release.py --version v2.0.1-dev --output-dir dist
+python scripts/package_release.py --version v3.0.0-rc1 --output-dir dist
 ```
 
 Review the generated source and evidence zips before publishing. They should exclude runtime projects, caches, `.env*`, local databases, and test reports.

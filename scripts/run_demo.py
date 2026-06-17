@@ -16,6 +16,10 @@ from app.tools.citation_grounding import generate_citation_grounding_report
 from app.tools.literature_metadata_lookup import run_metadata_lookup
 from app.tools.literature_rag import ask_literature_rag, build_literature_rag
 from app.tools.manuscript_references import generate_manuscript_references
+from app.tools.paper_writer.paper_plan import generate_paper_plan
+from app.tools.paper_writer.outline_builder import generate_paper_outline
+from app.tools.paper_writer.section_writer import generate_full_draft
+from app.tools.paper_writer.latex_export import export_draft_latex
 from app.tools.reference_approval import record_reference_approval
 from app.tools.reference_verification import run_reference_verification
 from app.tools.rag_quality import generate_chunk_quality_report, generate_retrieval_eval_report, generate_retrieval_eval_set
@@ -59,6 +63,13 @@ REQUIRED_FILES = [
     "manuscript/references_status.json",
     "manuscript/references_section_preview.md",
     "provenance/citation_grounding_report.json",
+    "manuscript/paper_plan.json",
+    "manuscript/outline.json",
+    "manuscript/draft_full.md",
+    "manuscript/draft_full.tex",
+    "manuscript/writing_audit.json",
+    "manuscript/writing_rounds.jsonl",
+    "provenance/claim_audit.json",
     "llm/llm_calls.jsonl",
 ]
 
@@ -95,6 +106,27 @@ def main() -> None:
     generate_bibtex(project_dir, "demo_project")
     generate_citation_support_report(project_dir, "demo_project")
     generate_citation_grounding_report(project_dir, "demo_project")
+
+    generate_paper_plan(
+        project_dir,
+        "demo_project",
+        project_name="新型钙钛矿材料研究",
+        domain="materials",
+        topic="efficiency and stability",
+    )
+    generate_paper_outline(
+        project_dir,
+        "demo_project",
+        project_name="新型钙钛矿材料研究",
+        domain="materials",
+    )
+    generate_full_draft(
+        project_dir,
+        "demo_project",
+        project_name="新型钙钛矿材料研究",
+        domain="materials",
+    )
+    export_draft_latex(project_dir, "demo_project")
     missing = [relative for relative in REQUIRED_FILES if not (project_dir / relative).exists()]
     print(f"Workflow status: {response.workflow_status}")
     print("Output files:")

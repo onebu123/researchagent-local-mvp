@@ -12,6 +12,10 @@ from app.tools.workspace_export import (
     build_workspace_export,
     latest_workspace_export_info,
 )
+from app.tools.evidence_trust_package import (
+    build_evidence_trust_package,
+    latest_evidence_trust_package_info,
+)
 
 router = APIRouter()
 
@@ -62,5 +66,21 @@ def create_workspace_export(project_id: str) -> dict[str, Any]:
 def get_latest_workspace_export(project_id: str) -> dict[str, Any]:
     try:
         return latest_workspace_export_info(_project_dir(project_id), project_id)
+    except Exception as exc:
+        raise _handle_export_error(exc) from exc
+
+
+@router.post("/projects/{project_id}/export/evidence-trust-package")
+def create_evidence_trust_package(project_id: str) -> dict[str, Any]:
+    try:
+        return build_evidence_trust_package(_project_dir(project_id), project_id)
+    except Exception as exc:
+        raise _handle_export_error(exc) from exc
+
+
+@router.get("/projects/{project_id}/export/evidence-trust-package")
+def get_latest_evidence_trust_package(project_id: str) -> dict[str, Any]:
+    try:
+        return latest_evidence_trust_package_info(_project_dir(project_id), project_id)
     except Exception as exc:
         raise _handle_export_error(exc) from exc

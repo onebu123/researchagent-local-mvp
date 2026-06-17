@@ -43,7 +43,7 @@ def test_source_zip_excludes_runtime_and_secret_files(tmp_path: Path) -> None:
     create_release_fixture(root)
     output_dir = tmp_path / "dist"
 
-    zip_path = package_release.create_source_zip("v2.0.1-dev", output_dir, root=root)
+    zip_path = package_release.create_source_zip("v3.0.0-rc1", output_dir, root=root)
 
     with zipfile.ZipFile(zip_path) as archive:
         names = set(archive.namelist())

@@ -15,7 +15,7 @@ def test_v2_production_scaffold_defaults_keep_local_fallback() -> None:
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["version"] == "v2.0.1-dev"
+    assert payload["version"] == "v3.0.0-rc1"
     assert payload["demo_safe"] is True
     assert payload["mock_fallback"]["no_external_network_required"] is True
     assert payload["validation"]["requires_api_key"] is False

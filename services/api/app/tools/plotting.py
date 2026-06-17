@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import hashlib
+import html
+import zlib
 from datetime import datetime, timezone
 from pathlib import Path
+from struct import pack
 from typing import Any
 
-import matplotlib
-
-matplotlib.use("Agg")
-
-import matplotlib.pyplot as plt
 import pandas as pd
 
 from app.tools.file_tools import ensure_dir, write_json
@@ -30,6 +28,63 @@ def _relative(path: Path, root: Path) -> str:
         return path.as_posix()
 
 
+def _png_chunk(kind: bytes, data: bytes) -> bytes:
+    return pack("!I", len(data)) + kind + data + pack("!I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+
+
+def _write_minimal_png(path: Path, width: int = 320, height: int = 180) -> None:
+    """Write a tiny deterministic grayscale PNG without matplotlib.
+
+    The project tests and release packages need figure artifacts, but the local
+    runtime should not depend on interactive plotting hooks.  This placeholder
+    PNG is intentionally simple; the richer, inspectable chart is the adjacent
+    SVG written by `_write_svg_chart`.
+    """
+    width = max(1, min(width, 640))
+    height = max(1, min(height, 480))
+    raw = b"".join(b"\x00" + (b"\xf5" * width) for _ in range(height))
+    payload = b"\x89PNG\r\n\x1a\n"
+    payload += _png_chunk(b"IHDR", pack("!IIBBBBB", width, height, 8, 0, 0, 0, 0))
+    payload += _png_chunk(b"IDAT", zlib.compress(raw, level=9))
+    payload += _png_chunk(b"IEND", b"")
+    path.write_bytes(payload)
+
+
+def _write_svg_chart(path: Path, title: str, labels: list[str], values: list[float]) -> None:
+    width = 640
+    height = 360
+    margin_left = 70
+    margin_bottom = 60
+    plot_width = width - margin_left - 40
+    plot_height = height - 90
+    max_value = max([abs(value) for value in values] or [1.0]) or 1.0
+    bar_width = plot_width / max(len(values), 1)
+    rects: list[str] = []
+    for index, value in enumerate(values):
+        normalized = abs(value) / max_value
+        bar_height = normalized * plot_height
+        x = margin_left + index * bar_width + 4
+        y = 50 + (plot_height - bar_height)
+        label = html.escape(labels[index] if index < len(labels) else str(index + 1))
+        rects.append(
+            f'<rect x="{x:.1f}" y="{y:.1f}" width="{max(bar_width - 8, 2):.1f}" height="{bar_height:.1f}" />'
+        )
+        rects.append(
+            f'<text x="{x + max(bar_width - 8, 2) / 2:.1f}" y="{height - 28}" text-anchor="middle" font-size="10">{label[:12]}</text>'
+        )
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+  <title>{html.escape(title)}</title>
+  <rect x="0" y="0" width="{width}" height="{height}" fill="white" />
+  <text x="{margin_left}" y="30" font-size="18" font-family="sans-serif">{html.escape(title)}</text>
+  <line x1="{margin_left}" y1="50" x2="{margin_left}" y2="{50 + plot_height}" stroke="black" />
+  <line x1="{margin_left}" y1="{50 + plot_height}" x2="{margin_left + plot_width}" y2="{50 + plot_height}" stroke="black" />
+  {''.join(rects)}
+  <text x="{margin_left}" y="{height - 8}" font-size="11" font-family="sans-serif">Generated locally from project CSV; inspect provenance before external use.</text>
+</svg>
+'''
+    path.write_text(svg, encoding="utf-8")
+
+
 def create_figures(csv_path: Path, output_dir: Path) -> list[dict[str, Any]]:
     ensure_dir(output_dir)
     if not csv_path.exists():
@@ -44,46 +99,43 @@ def create_figures(csv_path: Path, output_dir: Path) -> list[dict[str, Any]]:
     if numeric_df.empty:
         raise ValueError("CSV 中没有可绘图的数值列。")
 
-    first_column = numeric_df.columns[0]
+    first_column = str(numeric_df.columns[0])
     fig1_png = output_dir / "figure_1.png"
     fig1_svg = output_dir / "figure_1.svg"
-    plt.figure(figsize=(7, 4.5))
-    plt.hist(numeric_df[first_column].dropna(), bins=12, color="#6d5dfc", edgecolor="#ffffff")
-    plt.title(f"Distribution of {first_column}")
-    plt.xlabel(first_column)
-    plt.ylabel("Frequency")
-    plt.tight_layout()
-    plt.savefig(fig1_png, dpi=160)
-    plt.savefig(fig1_svg)
-    plt.close()
-
     fig2_png = output_dir / "figure_2.png"
     fig2_svg = output_dir / "figure_2.svg"
-    if len(numeric_df.columns) >= 2:
-        corr = numeric_df.corr(numeric_only=True).fillna(0)
-        plt.figure(figsize=(6, 5))
-        image = plt.imshow(corr, cmap="viridis", vmin=-1, vmax=1)
-        plt.colorbar(image, fraction=0.046, pad=0.04)
-        plt.xticks(range(len(corr.columns)), corr.columns, rotation=45, ha="right")
-        plt.yticks(range(len(corr.columns)), corr.columns)
-        plt.title("Correlation heatmap")
-        plt.tight_layout()
+
+    series = numeric_df[first_column].dropna().astype(float)
+    if series.empty:
+        raise ValueError("CSV 数值列没有可绘图的非空值。")
+    bucket_count = min(12, max(1, len(series)))
+    minimum = float(series.min())
+    maximum = float(series.max())
+    if minimum == maximum:
+        bucket_labels = [first_column]
+        bucket_values = [float(len(series))]
     else:
-        plt.figure(figsize=(7, 4.5))
-        plt.scatter(range(len(numeric_df[first_column])), numeric_df[first_column], color="#12b5cb")
-        plt.title(f"Scatter of {first_column}")
-        plt.xlabel("Index")
-        plt.ylabel(first_column)
-        plt.tight_layout()
-    plt.savefig(fig2_png, dpi=160)
-    plt.savefig(fig2_svg)
-    plt.close()
+        span = maximum - minimum
+        buckets = [0 for _ in range(bucket_count)]
+        for value in series:
+            idx = min(bucket_count - 1, int(((float(value) - minimum) / span) * bucket_count))
+            buckets[idx] += 1
+        bucket_labels = [str(index + 1) for index in range(bucket_count)]
+        bucket_values = [float(value) for value in buckets]
+    _write_minimal_png(fig1_png)
+    _write_svg_chart(fig1_svg, f"Distribution of {first_column}", bucket_labels, bucket_values)
+
+    means = numeric_df.mean(numeric_only=True).fillna(0)
+    labels = [str(label) for label in means.index[:12]]
+    values = [float(value) for value in means.iloc[:12]]
+    _write_minimal_png(fig2_png)
+    _write_svg_chart(fig2_svg, "Numeric column means", labels, values)
 
     provenance = [
         {
             "figure_id": "fig_001",
             "title": f"Distribution of {first_column}",
-            "figure_type": "histogram",
+            "figure_type": "histogram_svg_with_png_placeholder",
             "source_data": source_data,
             "analysis_file": "analysis/result_summary.json",
             "script_or_function": "app.tools.plotting.create_figures",
@@ -92,12 +144,12 @@ def create_figures(csv_path: Path, output_dir: Path) -> list[dict[str, Any]]:
             "is_experimental_result": True,
             "created_at": created_at,
             "data_hash": data_hash,
-            "warnings": [],
+            "warnings": ["PNG is a deterministic local placeholder; SVG contains the inspectable chart."],
         },
         {
             "figure_id": "fig_002",
-            "title": "Correlation heatmap" if len(numeric_df.columns) >= 2 else f"Scatter of {first_column}",
-            "figure_type": "heatmap" if len(numeric_df.columns) >= 2 else "scatter",
+            "title": "Numeric column means",
+            "figure_type": "summary_bar_svg_with_png_placeholder",
             "source_data": source_data,
             "analysis_file": "analysis/result_summary.json",
             "script_or_function": "app.tools.plotting.create_figures",
@@ -106,7 +158,7 @@ def create_figures(csv_path: Path, output_dir: Path) -> list[dict[str, Any]]:
             "is_experimental_result": True,
             "created_at": created_at,
             "data_hash": data_hash,
-            "warnings": [],
+            "warnings": ["PNG is a deterministic local placeholder; SVG contains the inspectable chart."],
         },
     ]
     write_json(output_dir / "figure_provenance.json", provenance)

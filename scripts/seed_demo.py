@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import shutil
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,7 +24,19 @@ def reset_demo_project_dir() -> None:
     if project_dir != expected_dir:
         raise RuntimeError("refuse to reset unexpected demo project path")
     if project_dir.exists():
-        shutil.rmtree(project_dir)
+        last_error: Exception | None = None
+        for attempt in range(5):
+            try:
+                shutil.rmtree(project_dir)
+                break
+            except OSError as exc:
+                # Background local-job tests may still be flushing derived demo artifacts.
+                # Retry briefly so demo reset remains deterministic without broadening
+                # the safety boundary beyond the exact demo project path checked above.
+                last_error = exc
+                time.sleep(0.1 * (attempt + 1))
+        else:
+            raise last_error or RuntimeError("failed to reset demo project")
 
 
 def write_demo_literature(project_dir: Path) -> None:

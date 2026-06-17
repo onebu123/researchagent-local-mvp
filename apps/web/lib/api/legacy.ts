@@ -2,6 +2,23 @@ import type {
   AnalysisComparison,
   AnalysisProvenance,
   AnalysisTimeline,
+  AgentIterativeLoopResult,
+  AgentRunRecord,
+  AutoScientistGeneratedCodeApproval,
+  AutoScientistGeneratedCodeProposal,
+  AutoScientistGeneratedCodeRerun,
+  AutoScientistExperimentClaimBindings,
+  AutoScientistExperimentTree,
+  AutoScientistExperimentTreeRerun,
+  AutoScientistExperimentTreeSelection,
+  AutoScientistPaperRewrite,
+  AutoScientistPaperCitationBindings,
+  AutoScientistPaperCompileReport,
+  AutoScientistTreeRevisionApplication,
+  AutoScientistTreeRevisionPlan,
+  AutoScientistIdeas,
+  AutoScientistRun,
+  AutoScientistStatus,
   AuditExport,
   AuditFileManifest,
   AuditFilteredExport,
@@ -14,11 +31,14 @@ import type {
   BibTeXResponse,
   CitationGroundingReport,
   CitationSupportReport,
+  ClaimAuditReport,
   ClaimAlignment,
   EvidenceClaim,
+  EvidenceTrustPackage,
   EvidenceClaimReviewStatus,
   EvidenceClaimReviewsResponse,
   FigureProvenanceRecord,
+  HumanReviewQueue,
   IssueResolution,
   IssueResolutionReview,
   IssueResolutionReviewRequest,
@@ -63,6 +83,14 @@ import type {
   PDFPageTextPreviewResponse,
   PDFPageReviewsResponse,
   PromptRegistry,
+  ProjectJob,
+  ProjectJobEvents,
+  ProjectJobLog,
+  PaperWriterPlan,
+  PaperWriterOutline,
+  PaperWriterDraft,
+  PaperWriterLatexExport,
+  PaperWriterStatus,
   ProjectExportInfo,
   ProjectDetail,
   ProjectRead,
@@ -76,6 +104,7 @@ import type {
   ReferenceVerificationRunResponse,
   ReferenceVerificationSummaryResponse,
   RevisionDecision,
+  RevisionPlan,
   RevisionDecisionPatch,
   RevisionDiffHumanStatus,
   RevisionDiffReviewsResponse,
@@ -165,6 +194,335 @@ export async function getLiteratureRAGChunks(projectId: string): Promise<Literat
 
 export async function getLiteratureRAGAnswers(projectId: string): Promise<LiteratureRAGAnswer[]> {
   return request<LiteratureRAGAnswer[]>(`/api/projects/${projectId}/literature/rag/answers`);
+}
+
+export async function runClaimAudit(
+  projectId: string,
+  manuscriptText?: string,
+  retrievalMode = "local_hybrid_fts"
+): Promise<ClaimAuditReport> {
+  return request<ClaimAuditReport>(`/api/projects/${projectId}/manuscript/claim-audit`, {
+    method: "POST",
+    body: JSON.stringify({ manuscript_text: manuscriptText, retrieval_mode: retrievalMode })
+  });
+}
+
+export async function getClaimAudit(projectId: string): Promise<ClaimAuditReport> {
+  return request<ClaimAuditReport>(`/api/projects/${projectId}/manuscript/claim-audit`);
+}
+
+export async function createRevisionPlan(projectId: string): Promise<RevisionPlan> {
+  return request<RevisionPlan>(`/api/projects/${projectId}/manuscript/revision-plan`, {
+    method: "POST"
+  });
+}
+
+export async function getRevisionPlan(projectId: string): Promise<RevisionPlan> {
+  return request<RevisionPlan>(`/api/projects/${projectId}/manuscript/revision-plan`);
+}
+
+export async function getHumanReviewQueue(projectId: string): Promise<HumanReviewQueue> {
+  return request<HumanReviewQueue>(`/api/projects/${projectId}/human-review-queue`);
+}
+
+export async function decideHumanReviewItem(
+  projectId: string,
+  reviewId: string,
+  decision: "approved" | "rejected" | "edited" | "dismissed",
+  reason = ""
+): Promise<HumanReviewQueue> {
+  return request<HumanReviewQueue>(`/api/projects/${projectId}/human-review-queue/${reviewId}/decision`, {
+    method: "POST",
+    body: JSON.stringify({ decision, reason })
+  });
+}
+
+export async function createAutoScientistIdeas(
+  projectId: string,
+  payload: { topic?: string; research_question?: string; max_ideas?: number } = {}
+): Promise<AutoScientistIdeas> {
+  return request<AutoScientistIdeas>(`/api/projects/${projectId}/auto-scientist/ideas`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function getAutoScientistIdeas(projectId: string): Promise<AutoScientistIdeas> {
+  return request<AutoScientistIdeas>(`/api/projects/${projectId}/auto-scientist/ideas`);
+}
+
+export async function runAutoScientist(
+  projectId: string,
+  payload: {
+    topic?: string;
+    research_question?: string;
+    max_ideas?: number;
+    max_experiments_per_idea?: number;
+    paper_type?: string;
+    retrieval_mode?: string;
+    write_paper?: boolean;
+    export_latex?: boolean;
+    allow_generated_code_experiments?: boolean;
+    generated_code_timeout_seconds?: number;
+    generated_code_max_memory_mb?: number;
+    generated_code_sandbox_mode?: "subprocess" | "docker";
+    generated_code_docker_image?: string;
+    generated_code_source_mode?: "deterministic" | "mock_llm" | "live_llm";
+    generated_code_strategy?: "lexical_diagnostics" | "retrieval_ablation" | "claim_support_matrix" | "descriptive_table_profile";
+    generated_code_requires_approval?: boolean | null;
+    generated_code_approved?: boolean;
+    enable_generated_code_revision_loop?: boolean;
+    generated_code_revision_rounds?: number;
+    enable_experiment_tree_search?: boolean;
+    experiment_tree_max_depth?: number;
+    experiment_tree_branching_factor?: number;
+  } = {}
+): Promise<AutoScientistRun> {
+  return request<AutoScientistRun>(`/api/projects/${projectId}/auto-scientist/run`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function getAutoScientistStatus(projectId: string): Promise<AutoScientistStatus> {
+  return request<AutoScientistStatus>(`/api/projects/${projectId}/auto-scientist/status`);
+}
+
+export async function runAutoScientistJob(
+  projectId: string,
+  payload: Parameters<typeof runAutoScientist>[1] = {}
+): Promise<ProjectJob> {
+  return request<ProjectJob>(`/api/projects/${projectId}/jobs/auto-scientist/run`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function startAutoScientistJob(
+  projectId: string,
+  payload: Parameters<typeof runAutoScientist>[1] = {}
+): Promise<ProjectJob> {
+  return request<ProjectJob>(`/api/projects/${projectId}/jobs/auto-scientist/start`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function getProjectJobs(projectId: string, limit = 50): Promise<ProjectJob[]> {
+  return request<ProjectJob[]>(`/api/projects/${projectId}/jobs?limit=${limit}`);
+}
+
+export async function getProjectJob(projectId: string, jobId: string): Promise<ProjectJob> {
+  return request<ProjectJob>(`/api/projects/${projectId}/jobs/${jobId}`);
+}
+
+export async function getProjectJobLog(projectId: string, jobId: string): Promise<ProjectJobLog> {
+  return request<ProjectJobLog>(`/api/projects/${projectId}/jobs/${jobId}/log`);
+}
+
+export async function getProjectJobEvents(projectId: string, jobId: string, sinceSequence = 0): Promise<ProjectJobEvents> {
+  return request<ProjectJobEvents>(`/api/projects/${projectId}/jobs/${jobId}/events?since_sequence=${sinceSequence}`);
+}
+
+export async function cancelProjectJob(projectId: string, jobId: string, reason = "User requested cancellation from Auto Scientist Workbench."): Promise<ProjectJob> {
+  return request<ProjectJob>(`/api/projects/${projectId}/jobs/${jobId}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({ reason })
+  });
+}
+
+export async function getAutoScientistRuns(projectId: string): Promise<Array<Record<string, unknown>>> {
+  return request<Array<Record<string, unknown>>>(`/api/projects/${projectId}/auto-scientist/runs`);
+}
+
+export async function getAutoScientistExperimentTree(projectId: string): Promise<AutoScientistExperimentTree> {
+  return request<AutoScientistExperimentTree>(`/api/projects/${projectId}/auto-scientist/experiment-tree/nodes`);
+}
+
+export async function selectAutoScientistExperimentTreeNode(
+  projectId: string,
+  payload: { node_id: string; reason?: string }
+): Promise<AutoScientistExperimentTreeSelection> {
+  return request<AutoScientistExperimentTreeSelection>(`/api/projects/${projectId}/auto-scientist/experiment-tree/select`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function rerunAutoScientistExperimentTreeNode(
+  projectId: string,
+  payload: { node_id: string; sandbox_mode?: "subprocess" | "docker"; docker_image?: string; timeout_seconds?: number; max_memory_mb?: number }
+): Promise<AutoScientistExperimentTreeRerun> {
+  return request<AutoScientistExperimentTreeRerun>(`/api/projects/${projectId}/auto-scientist/experiment-tree/rerun-node`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function rewriteAutoScientistPaperFromTree(
+  projectId: string,
+  payload: { node_id?: string; reason?: string } = {}
+): Promise<AutoScientistPaperRewrite> {
+  return request<AutoScientistPaperRewrite>(`/api/projects/${projectId}/auto-scientist/experiment-tree/rewrite-paper`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+
+export async function getAutoScientistExperimentClaimBindings(projectId: string): Promise<AutoScientistExperimentClaimBindings> {
+  return request<AutoScientistExperimentClaimBindings>(`/api/projects/${projectId}/auto-scientist/experiment-claim-bindings`);
+}
+
+export async function createAutoScientistExperimentClaimBindings(
+  projectId: string,
+  payload: { manuscript_relative_path?: string | null; node_id?: string | null; reason?: string; top_k?: number } = {}
+): Promise<AutoScientistExperimentClaimBindings> {
+  return request<AutoScientistExperimentClaimBindings>(`/api/projects/${projectId}/auto-scientist/experiment-claim-bindings`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function getAutoScientistPaperCitationBindings(projectId: string): Promise<AutoScientistPaperCitationBindings> {
+  return request<AutoScientistPaperCitationBindings>(`/api/projects/${projectId}/auto-scientist/paper-citation-bindings`);
+}
+
+export async function createAutoScientistPaperCitationBindings(
+  projectId: string,
+  payload: { manuscript_relative_path?: string | null; retrieval_mode?: string; top_k?: number } = {}
+): Promise<AutoScientistPaperCitationBindings> {
+  return request<AutoScientistPaperCitationBindings>(`/api/projects/${projectId}/auto-scientist/paper-citation-bindings`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function getAutoScientistPaperCompileReport(projectId: string): Promise<AutoScientistPaperCompileReport> {
+  return request<AutoScientistPaperCompileReport>(`/api/projects/${projectId}/auto-scientist/paper-compile`);
+}
+
+export async function compileAutoScientistPaper(
+  projectId: string,
+  payload: { manuscript_tex_relative_path?: string | null; engine?: "auto" | "pdflatex" | "tectonic" | "none"; timeout_seconds?: number; generate_preview_pdf?: boolean } = {}
+): Promise<AutoScientistPaperCompileReport> {
+  return request<AutoScientistPaperCompileReport>(`/api/projects/${projectId}/auto-scientist/paper-compile`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+
+export async function getAutoScientistTreeRevisionPlan(projectId: string): Promise<AutoScientistTreeRevisionPlan> {
+  return request<AutoScientistTreeRevisionPlan>(`/api/projects/${projectId}/auto-scientist/experiment-tree/revision-plan`);
+}
+
+export async function createAutoScientistTreeRevisionPlan(
+  projectId: string,
+  payload: { node_id?: string; reason?: string } = {}
+): Promise<AutoScientistTreeRevisionPlan> {
+  return request<AutoScientistTreeRevisionPlan>(`/api/projects/${projectId}/auto-scientist/experiment-tree/revision-plan`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function applyAutoScientistTreeRevision(
+  projectId: string,
+  payload: { patch_ids?: string[]; reason?: string; require_human_approval?: boolean; rerun_claim_audit?: boolean; regenerate_trust_package?: boolean } = {}
+): Promise<AutoScientistTreeRevisionApplication> {
+  return request<AutoScientistTreeRevisionApplication>(`/api/projects/${projectId}/auto-scientist/experiment-tree/apply-revision`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+
+export async function getAutoScientistGeneratedCodeApprovals(
+  projectId: string
+): Promise<AutoScientistGeneratedCodeApproval[]> {
+  return request<AutoScientistGeneratedCodeApproval[]>(`/api/projects/${projectId}/auto-scientist/generated-code/approvals`);
+}
+
+export async function getAutoScientistGeneratedCodeProposals(
+  projectId: string
+): Promise<AutoScientistGeneratedCodeProposal[]> {
+  return request<AutoScientistGeneratedCodeProposal[]>(`/api/projects/${projectId}/auto-scientist/generated-code/proposals`);
+}
+
+export async function approveAutoScientistGeneratedCode(
+  projectId: string,
+  payload: { run_id: string; experiment_id: string; source_hash?: string; decision: "approved" | "rejected"; reason?: string }
+): Promise<AutoScientistGeneratedCodeApproval> {
+  return request<AutoScientistGeneratedCodeApproval>(`/api/projects/${projectId}/auto-scientist/generated-code/approvals`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function rerunAutoScientistGeneratedCode(
+  projectId: string,
+  payload: { run_id: string; experiment_id: string; source_hash: string; sandbox_mode?: "subprocess" | "docker"; docker_image?: string; timeout_seconds?: number; max_memory_mb?: number }
+): Promise<AutoScientistGeneratedCodeRerun> {
+  return request<AutoScientistGeneratedCodeRerun>(`/api/projects/${projectId}/auto-scientist/generated-code/rerun`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+
+export async function createPaperWriterPlan(
+  projectId: string,
+  payload: { paper_type?: string; topic?: string; research_question?: string; retrieval_mode?: string } = {}
+): Promise<PaperWriterPlan> {
+  return request<PaperWriterPlan>(`/api/projects/${projectId}/paper-writer/plan`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function getPaperWriterPlan(projectId: string): Promise<PaperWriterPlan> {
+  return request<PaperWriterPlan>(`/api/projects/${projectId}/paper-writer/plan`);
+}
+
+export async function createPaperWriterOutline(
+  projectId: string,
+  retrievalMode = "local_hybrid_fts"
+): Promise<PaperWriterOutline> {
+  return request<PaperWriterOutline>(`/api/projects/${projectId}/paper-writer/outline`, {
+    method: "POST",
+    body: JSON.stringify({ retrieval_mode: retrievalMode })
+  });
+}
+
+export async function getPaperWriterOutline(projectId: string): Promise<PaperWriterOutline> {
+  return request<PaperWriterOutline>(`/api/projects/${projectId}/paper-writer/outline`);
+}
+
+export async function createPaperWriterDraft(
+  projectId: string,
+  retrievalMode = "local_hybrid_fts",
+  runClaimAuditAfter = true
+): Promise<PaperWriterDraft> {
+  return request<PaperWriterDraft>(`/api/projects/${projectId}/paper-writer/draft`, {
+    method: "POST",
+    body: JSON.stringify({ retrieval_mode: retrievalMode, run_claim_audit_after: runClaimAuditAfter })
+  });
+}
+
+export async function getPaperWriterDraft(projectId: string): Promise<PaperWriterStatus> {
+  return request<PaperWriterStatus>(`/api/projects/${projectId}/paper-writer/draft`);
+}
+
+export async function exportPaperWriterLatex(projectId: string): Promise<PaperWriterLatexExport> {
+  return request<PaperWriterLatexExport>(`/api/projects/${projectId}/paper-writer/export-latex`, {
+    method: "POST",
+    body: JSON.stringify({ compile_pdf: false })
+  });
+}
+
+export async function getPaperWriterStatus(projectId: string): Promise<PaperWriterStatus> {
+  return request<PaperWriterStatus>(`/api/projects/${projectId}/paper-writer/status`);
 }
 
 export async function getRAGChunkQuality(projectId: string): Promise<RAGChunkQualityReport> {
@@ -314,6 +672,24 @@ export async function runWorkflow(projectId: string): Promise<WorkflowRunRespons
   return request<WorkflowRunResponse>(`/api/projects/${projectId}/workflow/run`, {
     method: "POST"
   });
+}
+
+export async function runIterativeResearchLoop(
+  projectId: string,
+  maxRounds = 2
+): Promise<AgentIterativeLoopResult> {
+  return request<AgentIterativeLoopResult>(`/api/projects/${projectId}/agent/iterative-loop`, {
+    method: "POST",
+    body: JSON.stringify({ max_rounds: maxRounds })
+  });
+}
+
+export async function getLatestIterativeResearchLoop(projectId: string): Promise<AgentIterativeLoopResult> {
+  return request<AgentIterativeLoopResult>(`/api/projects/${projectId}/agent/iterative-loop/latest`);
+}
+
+export async function getAgentRuns(projectId: string): Promise<AgentRunRecord[]> {
+  return request<AgentRunRecord[]>(`/api/projects/${projectId}/agent/runs`);
 }
 
 export async function getOutput(projectId: string, outputId: string): Promise<OutputContent> {
@@ -822,6 +1198,16 @@ export async function getWorkspaceExport(projectId: string): Promise<WorkspaceEx
 
 export async function createWorkspaceExport(projectId: string): Promise<WorkspaceExportManifest> {
   return request<WorkspaceExportManifest>(`/api/projects/${projectId}/export/workspace`, {
+    method: "POST"
+  });
+}
+
+export async function getEvidenceTrustPackage(projectId: string): Promise<EvidenceTrustPackage> {
+  return request<EvidenceTrustPackage>(`/api/projects/${projectId}/export/evidence-trust-package`);
+}
+
+export async function createEvidenceTrustPackage(projectId: string): Promise<EvidenceTrustPackage> {
+  return request<EvidenceTrustPackage>(`/api/projects/${projectId}/export/evidence-trust-package`, {
     method: "POST"
   });
 }
@@ -1798,7 +2184,7 @@ export const mockWorkspaceExport: WorkspaceExportManifest = {
 };
 
 export const mockProductionScaffold: ProductionScaffoldReport = {
-  version: "v2.0.1-dev",
+  version: "v3.0.0-rc1",
   name: "Research Workspace scaffold",
   generated_at: new Date().toISOString(),
   environment: "local",
@@ -2435,6 +2821,10 @@ export const mockLiteratureRAGAnswers: LiteratureRAGAnswer[] = [
     question: "What does the demo literature mention about efficiency?",
     answer:
       "The local placeholder passage mentions efficiency together with process temperature, precursor concentration, stability, and band gap.",
+    answer_support_status: "weakly_supported",
+    minimum_support_score: 0.2,
+    top_source_score: 0.61,
+    source_passage_count: 1,
     source_passages: mockLiteratureRAGChunks,
     unsupported_notes: [],
     limitations: ["Mock fallback; human review is required before citation."],

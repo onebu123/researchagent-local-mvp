@@ -1,0 +1,1 @@
+{"manuscript":"# Results\n\nThe prototype improved retrieval clarity and workflow stability in a local mock evaluation.\n\nThe prototype proves a statistically significant survival outcome with a p-value.","expected_statuses":["weakly_supported","unsupported"],"must_not_contain":["statistically significant","causal","p-value","proves"]}

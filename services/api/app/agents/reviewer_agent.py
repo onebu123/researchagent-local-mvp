@@ -7,27 +7,16 @@ from pathlib import Path
 from typing import Any
 
 from app.agents.base import BaseAgent
+from app.tools.file_tools import relative_posix
+from app.tools.manuscript_safety import check_manuscript_safety, unsafe_terms_in_sentence
 from app.tools.revision_diff import build_revision_diff
 from app.workflows.state import ResearchState
 
 
-STRONG_CONCLUSION_TERMS = [
-    "statistically significant",
-    "significantly",
-    "significant",
-    "prove",
-    "proves",
-    "proved",
-    "causal",
-    "causality",
-    "demonstrated that",
-    "confirmed that",
-    "显著",
-    "证明",
-    "证实",
-    "因果",
-    "显著提高",
-    "显著改善",
+MANUSCRIPT_CANDIDATES = [
+    "manuscript/draft.md",
+    "manuscript/readable.md",
+    "manuscript/refined.md",
 ]
 
 
@@ -61,22 +50,73 @@ def _extract_checklist_claim_ids(manuscript: str) -> list[str]:
     return sorted(set(re.findall(r"\bclaim_\d{3,}\b", checklist)))
 
 
-def _contains_strong_term(text: str, lower_text: str, term: str) -> bool:
-    if term.isascii():
-        pattern = r"\b" + re.escape(term.lower()) + r"\b"
-        return re.search(pattern, lower_text) is not None
-    return term in text
-
-
 def _strong_terms_in_sentence(sentence: str) -> list[str]:
-    lower = sentence.lower()
-    return sorted(
-        {
-            term
-            for term in STRONG_CONCLUSION_TERMS
-            if _contains_strong_term(sentence, lower, term)
-        }
-    )
+    return unsafe_terms_in_sentence(sentence)
+
+
+def _candidate_path(project_dir: Path, relative_path: str) -> Path | None:
+    if relative_path not in MANUSCRIPT_CANDIDATES:
+        return None
+    path = project_dir / relative_path
+    if path.exists() and path.is_file():
+        return path
+    return None
+
+
+def _claim_alignment_manuscript_path(
+    project_dir: Path,
+    claim_alignment: dict[str, Any],
+) -> Path | None:
+    for key in [
+        "audited_manuscript_file",
+        "audited_manuscript_path",
+        "reviewed_manuscript_file",
+        "manuscript_file",
+    ]:
+        value = claim_alignment.get(key)
+        if isinstance(value, str):
+            path = _candidate_path(project_dir, value)
+            if path is not None:
+                return path
+    return None
+
+
+def _latest_manuscript_path(project_dir: Path) -> Path | None:
+    existing = [
+        (index, project_dir / relative_path)
+        for index, relative_path in enumerate(MANUSCRIPT_CANDIDATES)
+        if (project_dir / relative_path).exists()
+    ]
+    if not existing:
+        return None
+    _, path = max(existing, key=lambda item: (item[1].stat().st_mtime_ns, item[0]))
+    return path
+
+
+def _select_manuscript(
+    project_dir: Path,
+    state: ResearchState,
+    claim_alignment: dict[str, Any],
+) -> tuple[str, str, list[str]]:
+    candidates = [
+        relative_path
+        for relative_path in MANUSCRIPT_CANDIDATES
+        if (project_dir / relative_path).exists()
+    ]
+    selected = _claim_alignment_manuscript_path(project_dir, claim_alignment)
+    if selected is None:
+        selected = _latest_manuscript_path(project_dir)
+    if selected is not None:
+        return (
+            selected.read_text(encoding="utf-8", errors="replace"),
+            relative_posix(selected, project_dir),
+            candidates,
+        )
+    if state.refined_manuscript:
+        return state.refined_manuscript, "state.refined_manuscript", candidates
+    if state.manuscript:
+        return state.manuscript, "state.manuscript", candidates
+    return "", "missing", candidates
 
 
 def _extract_section(markdown: str, section: str) -> str:
@@ -186,25 +226,13 @@ class ReviewerAgent(BaseAgent):
     def run(self, state: ResearchState) -> ResearchState:
         self.log(state, "reviewing manuscript")
         project_dir = state.project_dir
-        draft_path = project_dir / "manuscript" / "draft.md"
-        refined_path = project_dir / "manuscript" / "refined.md"
         evidence_path = project_dir / "provenance" / "evidence.json"
         claim_alignment_path = project_dir / "provenance" / "claim_alignment.json"
+        claim_audit_path = project_dir / "provenance" / "claim_audit.json"
         figure_path = project_dir / "figures" / "figure_provenance.json"
         analysis_path = project_dir / "analysis" / "result_summary.json"
         analysis_provenance_path = project_dir / "analysis" / "analysis_provenance.json"
         literature_index_path = project_dir / "literature" / "literature_index.json"
-
-        manuscript_parts: list[str] = []
-        if draft_path.exists():
-            manuscript_parts.append(draft_path.read_text(encoding="utf-8", errors="replace"))
-        elif state.manuscript:
-            manuscript_parts.append(state.manuscript)
-        if refined_path.exists():
-            manuscript_parts.append(refined_path.read_text(encoding="utf-8", errors="replace"))
-        elif state.refined_manuscript:
-            manuscript_parts.append(state.refined_manuscript)
-        manuscript = "\n\n".join(manuscript_parts)
 
         evidence = _read_json(evidence_path, state.provenance or [])
         if not isinstance(evidence, list):
@@ -224,8 +252,18 @@ class ReviewerAgent(BaseAgent):
         claim_alignment = _read_json(claim_alignment_path, {})
         if not isinstance(claim_alignment, dict):
             claim_alignment = {}
+        claim_audit = _read_json(claim_audit_path, {})
+        if not isinstance(claim_audit, dict):
+            claim_audit = {}
+        manuscript, reviewed_manuscript_file, manuscript_candidates = _select_manuscript(
+            project_dir,
+            state,
+            claim_alignment,
+        )
 
         report: dict[str, Any] = {
+            "reviewed_manuscript_file": reviewed_manuscript_file,
+            "manuscript_candidates": manuscript_candidates,
             "overall_decision": "minor_revision",
             "major_issues": [],
             "minor_issues": [],
@@ -237,6 +275,11 @@ class ReviewerAgent(BaseAgent):
             "consistency_checks": [],
             "metadata_issues": [],
             "sentence_issues": [],
+            "claim_audit_issues": [],
+            "unsupported_claim_count": 0,
+            "weakly_supported_claim_count": 0,
+            "human_review_required_count": 0,
+            "claim_audit_file": "provenance/claim_audit.json" if claim_audit_path.exists() else None,
             "recommended_revisions": [],
         }
 
@@ -321,11 +364,11 @@ class ReviewerAgent(BaseAgent):
                         )
             report["consistency_checks"].append("analysis_provenance.json exists.")
 
-        lower_manuscript = manuscript.lower()
+        safety_result = check_manuscript_safety(manuscript)
         found_terms = [
-            term
-            for term in STRONG_CONCLUSION_TERMS
-            if _contains_strong_term(manuscript, lower_manuscript, term)
+            str(issue.get("term"))
+            for issue in safety_result["issues"]
+            if isinstance(issue, dict) and issue.get("term")
         ]
         has_statistical_support = bool(analysis.get("statistical_tests") or analysis.get("p_values"))
         if found_terms and not has_statistical_support:
@@ -550,6 +593,35 @@ class ReviewerAgent(BaseAgent):
 
         report["sentence_issues"] = sentence_issues
 
+        claim_audit_items = [
+            item for item in claim_audit.get("claim_audits", []) if isinstance(item, dict)
+        ] if claim_audit else []
+        unsupported_claims = [
+            item for item in claim_audit_items if item.get("answer_support_status") == "unsupported"
+        ]
+        weakly_supported_claims = [
+            item for item in claim_audit_items if item.get("answer_support_status") == "weakly_supported"
+        ]
+        human_review_claims = [item for item in claim_audit_items if item.get("human_review_required")]
+        report["unsupported_claim_count"] = len(unsupported_claims)
+        report["weakly_supported_claim_count"] = len(weakly_supported_claims)
+        report["human_review_required_count"] = len(human_review_claims)
+        for item in unsupported_claims:
+            issue = (
+                f"{item.get('claim_audit_id', 'claim_audit')}: unsupported manuscript claim in "
+                f"{item.get('section', 'Unknown')} requires source evidence, removal, or limitation rewrite."
+            )
+            report["claim_audit_issues"].append(issue)
+            report["evidence_issues"].append(issue)
+        for item in weakly_supported_claims:
+            issue = (
+                f"{item.get('claim_audit_id', 'claim_audit')}: weakly supported claim in "
+                f"{item.get('section', 'Unknown')} requires cautious wording and human review."
+            )
+            report["claim_audit_issues"].append(issue)
+        if claim_audit_path.exists() and not claim_audit_items:
+            report["claim_audit_issues"].append("claim_audit.json exists but contains no audited claims.")
+
         if not report["major_issues"]:
             report["major_issues"].extend(
                 issue
@@ -572,6 +644,7 @@ class ReviewerAgent(BaseAgent):
             "v0.3 still requires human verification of literature metadata, evidence status, and figure interpretation."
         )
         report["recommended_revisions"] = [
+            "Resolve unsupported and weakly supported claim audit items before external use.",
             "Add human-verified literature metadata before using Verified references.",
             "Review every human_verified=false claim before submission.",
             "Add statistical_tests or p_values only after a real, reproducible statistical analysis exists.",
@@ -581,6 +654,8 @@ class ReviewerAgent(BaseAgent):
 
         decision = "minor_revision"
         if report["citation_issues"]:
+            decision = _decision_at_most(decision, "major_revision")
+        if report["unsupported_claim_count"]:
             decision = _decision_at_most(decision, "major_revision")
         if report["evidence_issues"] or report["figure_issues"] or report["statistical_issues"] or report["overclaims"]:
             decision = _decision_at_most(decision, "major_revision")
@@ -627,6 +702,10 @@ class ReviewerAgent(BaseAgent):
 ## Sentence Issues
 
 {chr(10).join(f"- {item['issue_id']} [{item['severity']}] {item['section']}: {item['issue_type']} - {item['sentence']}" for item in report["sentence_issues"]) or "- 暂无。"}
+
+## Claim Audit Issues
+
+{chr(10).join(f"- {item}" for item in report["claim_audit_issues"]) or "- 暂无。"}
 
 ## Overclaims
 

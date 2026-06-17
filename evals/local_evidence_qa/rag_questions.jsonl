@@ -1,0 +1,2 @@
+{"question":"What does the fixture say about retrieval clarity and workflow stability?","expected_answer_support_status":"weakly_supported","expected_terms":["retrieval","stability"],"must_not_contain":["statistically significant","causal","p-value"]}
+{"question":"What p-value proves the survival outcome?","expected_answer_support_status":"unsupported","expected_terms":[],"must_not_contain":["statistically significant","causal","p-value","proves"]}
